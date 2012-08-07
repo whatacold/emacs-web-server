@@ -170,20 +170,13 @@
 
 (defun httpd-gen-path (path)
   "Translate GET to secure path in httpd-root."
-  (let ((path (httpd-clean-path (concat httpd-root path))))
-    (let ((indexes httpd-indexes)
-          (testpath nil))
-      (if (not (file-directory-p path)) path
-        (while (not (or (null indexes)
-                        (and testpath (file-exists-p testpath))))
-          (setq testpath (concat path "/" (pop indexes))))
-        (if (file-exists-p testpath) testpath path)))))
-
-(defun httpd-path-base (path)
-  "Return the directory base of the path."
-  (if (file-directory-p path) path
-    (let ((pathlist (split-string path "\\/")))
-      (mapconcat 'identity (butlast pathlist) "/"))))
+  (let ((clean (expand-file-name (httpd-clean-path path) httpd-root)))
+    (if (file-directory-p clean)
+        (let* ((dir (file-name-as-directory clean))
+               (indexes (mapcar* (apply-partially 'concat dir) httpd-indexes))
+               (existing (remove-if-not 'file-exists-p indexes)))
+          (or (car existing) dir))
+      clean)))
 
 (defun httpd-send-file (proc path)
   "Serve file to the given client."
@@ -193,9 +186,9 @@
     (httpd-send-buffer proc (current-buffer))))
 
 (defun httpd-clean-path (path)
-  "Clean dangerous .. from the path."
+  "Clean dangerous .. from the path and remove the leading /."
   (mapconcat 'identity
-             (delete ".." (split-string (url-unhex-string path) "\\/")) "/"))
+   (delete "" (delete ".." (split-string (url-unhex-string path) "/"))) "/"))
 
 (defun httpd-get-ext (path)
   "Get extention from path to determine MIME type."
