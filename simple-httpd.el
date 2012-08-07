@@ -237,7 +237,7 @@ variable/value pairs, and the third is the fragment."
 
 (defun httpd-get-mime (ext)
   "Fetch MIME type given the file extention."
-  (or (cdr (assoc (downcase ext) httpd-mime-types))
+  (or (and ext (cdr (assoc (downcase ext) httpd-mime-types)))
       "application/octet-stream"))
 
 ;; Data sending functions
