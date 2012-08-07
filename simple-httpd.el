@@ -81,13 +81,14 @@
 </body></html>"))
   "HTML for various errors.")
 
+;; User interface
+
 ;;;###autoload
 (defun httpd-start ()
   "Start the emacs web server."
   (interactive)
   (httpd-stop)
   (httpd-clear-log)
-  (httpd-log-string "(log)\n")
   (httpd-log-alist `(start ,(current-time-string)))
   (make-network-process
    :name     "httpd"
@@ -103,28 +104,7 @@
   (if (process-status "httpd") (delete-process "httpd"))
   (httpd-log-alist `(stop ,(current-time-string))))
 
-(defun httpd-log-string (string)
-  "Add string to the web server log."
-  (with-current-buffer (get-buffer-create "*httpd*")
-    (goto-char (point-max))
-    (insert string)))
-
-(defun httpd-log-alist (item &optional sp)
-  "Add alist to the log."
-  (if (not sp) (setq sp 2))
-  (with-current-buffer (get-buffer-create "*httpd*")
-    (goto-char (- (point-max) 2))
-    (insert "\n" (make-string sp 32))
-    (if (atom (cadr item)) (insert (format "%S" item))
-      (insert "(" (symbol-name (car item)))
-      (dolist (el (cdr item))
-        (httpd-log-alist el (+ 1 sp)))
-      (insert ")"))))
-
-(defun httpd-clear-log ()
-  "Clear the web server log."
-  (with-current-buffer (get-buffer-create "*httpd*")
-    (erase-buffer)))
+;; Networking code
 
 (defun httpd-filter (proc string)
   "Runs each time client makes a request."
@@ -147,8 +127,37 @@
     (httpd-log-alist log)
     (cond
      ((not (= status 200)) (httpd-error proc status))
-     (t (httpd-send-header proc (httpd-get-mime (httpd-get-ext path)) status)
+     (t (httpd-send-header proc
+                           (httpd-get-mime (file-name-extension path)) status)
         (httpd-send-file proc path)))))
+
+;; Logging
+
+(defun httpd-log-string (string)
+  "Add string to the web server log."
+  (with-current-buffer (get-buffer-create "*httpd*")
+    (goto-char (point-max))
+    (insert string)))
+
+(defun httpd-log-alist (item &optional sp)
+  "Add alist to the log."
+  (if (not sp) (setq sp 2))
+  (with-current-buffer (get-buffer-create "*httpd*")
+    (goto-char (- (point-max) 2))
+    (insert "\n" (make-string sp 32))
+    (if (atom (cadr item)) (insert (format "%S" item))
+      (insert "(" (symbol-name (car item)))
+      (dolist (el (cdr item))
+        (httpd-log-alist el (+ 1 sp)))
+      (insert ")"))))
+
+(defun httpd-clear-log ()
+  "Clear the web server log."
+  (with-current-buffer (get-buffer-create "*httpd*")
+    (erase-buffer)
+    (httpd-log-string "(log)\n")))
+
+;; Request parsing
 
 (defun httpd-parse (string)
   "Parse client http header into alist."
@@ -160,6 +169,24 @@
                              (cdr (split-string line ": ")) ": ")) req))
     (cddr req)))
 
+(defun httpd-parse-uri (uri)
+  "Split a URI into it's components. In the return, the first
+element is the script path, the second is an alist of
+variable/value pairs, and the third is the fragment."
+  (let ((p1 (string-match (regexp-quote "?") uri))
+        (p2 (string-match (regexp-quote "#") uri))
+        retval)
+    (push (if p2 (url-unhex-string (substring uri (1+ p2))))
+          retval)
+    (push (if p1 (mapcar (lambda (str)
+                           (mapcar 'url-unhex-string (split-string str "=")))
+                         (split-string (substring uri (1+ p1) p2) "&")))
+          retval)
+    (push (substring uri 0 (or p1 p2))
+          retval)))
+
+;; Path handling
+
 (defun httpd-status (path)
   "Determine status code for the path."
   (cond
@@ -167,6 +194,11 @@
    ((not (file-readable-p path)) 403)
    ((file-directory-p path)      403)
    (200)))
+
+(defun httpd-clean-path (path)
+  "Clean dangerous .. from the path and remove the leading /."
+  (mapconcat 'identity
+   (delete "" (delete ".." (split-string (url-unhex-string path) "/"))) "/"))
 
 (defun httpd-gen-path (path)
   "Translate GET to secure path in httpd-root."
@@ -178,25 +210,11 @@
           (or (car existing) dir))
       clean)))
 
-(defun httpd-send-file (proc path)
-  "Serve file to the given client."
-  (with-temp-buffer
-    (set-buffer-multibyte nil)
-    (insert-file-contents path)
-    (httpd-send-buffer proc (current-buffer))))
-
-(defun httpd-clean-path (path)
-  "Clean dangerous .. from the path and remove the leading /."
-  (mapconcat 'identity
-   (delete "" (delete ".." (split-string (url-unhex-string path) "/"))) "/"))
-
-(defun httpd-get-ext (path)
-  "Get extention from path to determine MIME type."
-  (car (reverse (split-string path "\\."))))
-
 (defun httpd-get-mime (ext)
   "Fetch MIME type given the file extention."
-  (cdr (assoc ext httpd-mime-types)))
+  (cdr (assoc (downcase ext) httpd-mime-types)))
+
+;; Data sending functions
 
 (defun httpd-send-header (proc mime status)
   "Send header with given MIME type."
@@ -205,10 +223,12 @@
      proc (format "HTTP/1.0 %d %s\nContent-Type: %s\n\n"
                   status status-str mime))))
 
-(defun httpd-error (proc status)
-  "Handle an error situation."
-  (httpd-send-header proc "text/html" status)
-  (httpd-send-string proc (cdr (assq status httpd-html))))
+(defun httpd-send-file (proc path)
+  "Serve file to the given client."
+  (with-temp-buffer
+    (set-buffer-multibyte nil)
+    (insert-file-contents path)
+    (httpd-send-buffer proc (current-buffer))))
 
 (defun httpd-send-string (proc string)
   "Send string to client."
@@ -221,21 +241,10 @@
     (httpd-send-string proc (buffer-substring (point-min)
                                               (point-max)))))
 
-(defun httpd-parse-uri (uri)
-  "Split a URI into it's components. In the return, the first
-element is the script path, the second is an alist of
-variable/value pairs, and the third is the target."
-  (let ((p1 (string-match (regexp-quote "?") uri))
-        (p2 (string-match (regexp-quote "#") uri))
-        retval)
-    (push (if p2 (url-unhex-string (substring uri (1+ p2))))
-          retval)
-    (push (if p1 (mapcar #'(lambda (str)
-                             (mapcar 'url-unhex-string (split-string str "=")))
-                         (split-string (substring uri (1+ p1) p2) "&")))
-          retval)
-    (push (substring uri 0 (or p1 p2))
-          retval)))
+(defun httpd-error (proc status)
+  "Handle an error situation."
+  (httpd-send-header proc "text/html" status)
+  (httpd-send-string proc (cdr (assq status httpd-html))))
 
 (provide 'httpd)
 
