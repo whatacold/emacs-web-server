@@ -228,12 +228,15 @@ variable/value pairs, and the third is the fragment."
     (reduce (lambda (s e) (replace-regexp-in-string (car e) (cdr e) s))
             entities :initial-value string)))
 
-(defun httpd-send-header (proc mime status)
-  "Send header with given MIME type."
+(defun httpd-send-header (proc mime status &rest extra-headers)
+  "Send an HTTP header with given MIME type."
   (let ((status-str (cdr (assq status httpd-status-codes))))
-    (process-send-string
-     proc (format "HTTP/1.0 %d %s\nContent-Type: %s\n\n"
-                  status status-str mime))))
+    (with-temp-buffer
+      (insert (format "HTTP/1.0 %d %s\r\n" status status-str))
+      (dolist (header (cons (cons "Content-Type" mime) extra-headers))
+        (insert (format "%s: %s\r\n" (car header) (cdr header))))
+      (insert "\r\n")
+      (process-send-string proc (buffer-string)))))
 
 (defun httpd-send-file (proc path)
   "Serve file to the given client."
