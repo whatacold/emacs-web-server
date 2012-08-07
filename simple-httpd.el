@@ -48,6 +48,7 @@
     ("html" . "text/html")
     ("xml"  . "text/xml")
     ("txt"  . "text/plain")
+    ("el"   . "text/plain")
     ("gz"   . "application/octet-stream")
     ("ps"   . "application/postscript")
     ("eps"  . "application/postscript")
