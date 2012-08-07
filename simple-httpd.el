@@ -283,6 +283,6 @@ variable/value pairs, and the third is the fragment."
   (httpd-send-header proc "text/html" status)
   (httpd-send-string proc (cdr (assq status httpd-html))))
 
-(provide 'httpd)
+(provide 'simple-httpd)
 
 ;;; simple-httpd.el ends here
