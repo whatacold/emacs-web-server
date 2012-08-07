@@ -1,25 +1,38 @@
-;;; httpd.el --- HTTP/1.0 web server for emacs
+;;; simple-httpd.el --- HTTP/1.0 web server
 
 ;; This is free and unencumbered software released into the public domain.
 
+;; Author: Christopher Wellons <mosquitopsu@gmail.com>
+;; URL: https://github.com/skeeto/emacs-http-server
+;; Version: 1.0
+
 ;;; Commentary:
 
-;; Load this file and run httpd-start to start the web server. The
-;; variable httpd-root changes the server's root folder, and
-;; httpd-port adjusts the port.
+;; Use `httpd-start' to start the web server. The variable
+;; `httpd-root' sets the server's root folder and `httpd-port' sets
+;; the listening port.
 
 ;;; TODO:
+
 ;; * Directory listing
 
 ;;; Code:
 
 (require 'cl)
 
-(defvar httpd-port 8080
-  "Web server port.")
+(defgroup simple-httpd nil
+  "A simple web server."
+  :group 'comm)
 
-(defvar httpd-root "~/public_html"
-  "Web server file root.")
+(defcustom httpd-port 8080
+  "Web server port."
+  :group 'simple-httpd
+  :type 'integer)
+
+(defcustom httpd-root "~/public_html"
+  "Web server file root."
+  :group 'simple-httpd
+  :type 'directory)
 
 (defvar httpd-mime-types
   '(("png"  . "image/png")
@@ -36,9 +49,6 @@
   '("index.html"
     "index.htm")
   "File served by default when accessing a directory.")
-
-(defvar httpd-htaccess-name ".htaccess.el"
-  "Filename for hypertext access files.")
 
 (defvar httpd-status-codes
   '((200 . "OK")
@@ -71,12 +81,13 @@
 </body></html>"))
   "HTML for various errors.")
 
+;;;###autoload
 (defun httpd-start ()
   "Start the emacs web server."
   (interactive)
   (httpd-stop)
   (httpd-clear-log)
-  (httpd-log-string "'(log)\n")
+  (httpd-log-string "(log)\n")
   (httpd-log-alist `(start ,(current-time-string)))
   (make-network-process
    :name     "httpd"
@@ -85,6 +96,7 @@
    :family   'ipv4
    :filter   'httpd-filter))
 
+;;;###autoload
 (defun httpd-stop ()
   "Stop the emacs web server."
   (interactive)
@@ -106,7 +118,7 @@
     (if (atom (cadr item)) (insert (format "%S" item))
       (insert "(" (symbol-name (car item)))
       (dolist (el (cdr item))
-	(httpd-log-alist el (+ 1 sp)))
+        (httpd-log-alist el (+ 1 sp)))
       (insert ")"))))
 
 (defun httpd-clear-log ()
@@ -117,38 +129,35 @@
 (defun httpd-filter (proc string)
   "Runs each time client makes a request."
   (let* ((log '(connection))
-	 (req (httpd-parse string))
-	 (uri (cadr (assoc "GET" req)))
-	 (parsed-uri (httpd-parse-uri uri))
-	 (uri-path (nth 0 parsed-uri))
-	 (uri-query (nth 1 parsed-uri))
-	 (uri-target (nth 2 parsed-uri))
-	 (servlet (httpd-get-servlet uri-path))
-	 (path (httpd-gen-path uri-path))
-	 (status (httpd-status path)))
+         (req (httpd-parse string))
+         (uri (cadr (assoc "GET" req)))
+         (parsed-uri (httpd-parse-uri uri))
+         (uri-path (nth 0 parsed-uri))
+         (uri-query (nth 1 parsed-uri))
+         (uri-target (nth 2 parsed-uri))
+         (path (httpd-gen-path uri-path))
+         (status (httpd-status path)))
     (setq log (list 'connection
-		    `(date ,(current-time-string))
-		    `(address ,(car (process-contact proc)))
-		    `(get ,uri-path)
-		    (append '(req) req)
-		    `(servlet ,(format "%S" servlet))
-		    `(path ,path)
-		    `(status ,status)))
+                    `(date ,(current-time-string))
+                    `(address ,(car (process-contact proc)))
+                    `(get ,uri-path)
+                    (append '(req) req)
+                    `(path ,path)
+                    `(status ,status)))
     (httpd-log-alist log)
     (cond
-     (servlet (httpd-handle-servlet proc servlet uri-query req uri-path))
      ((not (= status 200)) (httpd-error proc status))
      (t (httpd-send-header proc (httpd-get-mime (httpd-get-ext path)) status)
-	(httpd-send-file proc path)))))
+        (httpd-send-file proc path)))))
 
 (defun httpd-parse (string)
   "Parse client http header into alist."
   (let* ((lines (split-string string "[\n\r]+"))
-	 (req (list (split-string (car lines)))))
+         (req (list (split-string (car lines)))))
     (dolist (line (cdr lines))
       (push (list (car (split-string line ": "))
-		  (mapconcat 'identity
-			     (cdr (split-string line ": ")) ": ")) req))
+                  (mapconcat 'identity
+                             (cdr (split-string line ": ")) ": ")) req))
     (cddr req)))
 
 (defun httpd-status (path)
@@ -162,26 +171,19 @@
 (defun httpd-gen-path (path)
   "Translate GET to secure path in httpd-root."
   (let ((path (httpd-clean-path (concat httpd-root path))))
-    (httpd-htaccess (httpd-path-base path))
     (let ((indexes httpd-indexes)
-	  (testpath nil))
+          (testpath nil))
       (if (not (file-directory-p path)) path
-	(while (not (or (null indexes)
-			(and testpath (file-exists-p testpath))))
-	  (setq testpath (concat path "/" (pop indexes))))
-	(if (file-exists-p testpath) testpath path)))))
+        (while (not (or (null indexes)
+                        (and testpath (file-exists-p testpath))))
+          (setq testpath (concat path "/" (pop indexes))))
+        (if (file-exists-p testpath) testpath path)))))
 
 (defun httpd-path-base (path)
   "Return the directory base of the path."
   (if (file-directory-p path) path
     (let ((pathlist (split-string path "\\/")))
       (mapconcat 'identity (butlast pathlist) "/"))))
-
-(defun httpd-htaccess (path)
-  "Load a hypertext access file."
-  (let ((htaccess (concat path "/" httpd-htaccess-name)))
-    (if (and (file-exists-p htaccess) (file-readable-p htaccess))
-	(load-file htaccess))))
 
 (defun httpd-send-file (proc path)
   "Serve file to the given client."
@@ -193,7 +195,7 @@
 (defun httpd-clean-path (path)
   "Clean dangerous .. from the path."
   (mapconcat 'identity
-	     (delete ".." (split-string (url-unhex-string path) "\\/")) "/"))
+             (delete ".." (split-string (url-unhex-string path) "\\/")) "/"))
 
 (defun httpd-get-ext (path)
   "Get extention from path to determine MIME type."
@@ -208,7 +210,7 @@
   (let ((status-str (cdr (assq status httpd-status-codes))))
     (process-send-string
      proc (format "HTTP/1.0 %d %s\nContent-Type: %s\n\n"
-		  status status-str mime))))
+                  status status-str mime))))
 
 (defun httpd-error (proc status)
   "Handle an error situation."
@@ -224,63 +226,24 @@
   "Send buffer to client."
   (with-current-buffer buffer
     (httpd-send-string proc (buffer-substring (point-min)
-					      (point-max)))))
+                                              (point-max)))))
 
 (defun httpd-parse-uri (uri)
   "Split a URI into it's components. In the return, the first
 element is the script path, the second is an alist of
 variable/value pairs, and the third is the target."
   (let ((p1 (string-match (regexp-quote "?") uri))
-	(p2 (string-match (regexp-quote "#") uri))
-	retval)
+        (p2 (string-match (regexp-quote "#") uri))
+        retval)
     (push (if p2 (url-unhex-string (substring uri (1+ p2))))
-	  retval)
+          retval)
     (push (if p1 (mapcar #'(lambda (str)
-			     (mapcar 'url-unhex-string (split-string str "=")))
-			 (split-string (substring uri (1+ p1) p2) "&")))
-	  retval)
+                             (mapcar 'url-unhex-string (split-string str "=")))
+                         (split-string (substring uri (1+ p1) p2) "&")))
+          retval)
     (push (substring uri 0 (or p1 p2))
-	  retval)))
-
-(defun httpd-get-servlet (uri-path)
-  "Return function for given path if it exists."
-  (let ((func (intern-soft (concat "httpd" uri-path))))
-    (if (fboundp func) func)))
-
-(defun httpd-handle-servlet (proc servlet uri-query req uri-path)
-  "Execute the given servlet and handle any errors."
-  (with-temp-buffer
-    (condition-case nil
-	(let (mimetype)
-	  (setq mimetype (funcall servlet uri-query req uri-path))
-	  (set-buffer-multibyte nil)
-	  (httpd-send-header proc mimetype 200)
-	  (httpd-send-buffer proc (current-buffer)))
-      (error (httpd-error proc 500)))))
-
-(defun httpd-generate-html (sexp)
-  "Generate HTML from the given sexp. Tags are based on symbol
-names, like 'html, 'head. The elisp symbol begins a section of
-lisp to be executed, and the results used to generate
-HTML. Strings are passed literally."
-  (let ((tag (if (consp sexp) (car sexp))))
-    (cond
-     ((stringp sexp)
-      (insert sexp))
-     ((eq tag 'elisp)
-      (mapcar 'httpd-generate-html (eval (cadr sexp))))
-     ((symbolp tag)
-      (insert (format "<%s>\n" tag))
-      (mapc 'httpd-generate-html (cdr sexp))
-      (insert (format "</%s>\n" tag)))
-     ((listp tag)
-      (insert (format "<%s " (car tag))
-	      (mapconcat
-	       #'(lambda (pair)
-		   (format "%s=\"%s\"" (car pair) (cdr pair)))
-	       (cdr tag) " ") ">")
-      (mapc 'httpd-generate-html (cdr sexp))
-      (insert (format "</%s>\n" (car tag))))))
-  "text/html")
+          retval)))
 
 (provide 'httpd)
+
+;;; simple-httpd.el ends here
