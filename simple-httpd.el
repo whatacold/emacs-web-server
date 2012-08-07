@@ -12,10 +12,6 @@
 ;; `httpd-root' sets the server's root folder and `httpd-port' sets
 ;; the listening port.
 
-;;; TODO:
-
-;; * Directory listing
-
 ;;; Code:
 
 (require 'cl)
@@ -33,6 +29,11 @@
   "Web server file root."
   :group 'simple-httpd
   :type 'directory)
+
+(defcustom httpd-listings t
+  "If true, serve directory listings."
+  :group 'simple-httpd
+  :type 'boolean)
 
 (defvar httpd-mime-types
   '(("png"  . "image/png")
@@ -127,8 +128,11 @@
     (httpd-log-alist log)
     (cond
      ((not (= status 200)) (httpd-error proc status))
-     (t (httpd-send-header proc
-                           (httpd-get-mime (file-name-extension path)) status)
+     ((file-directory-p path)
+      (httpd-send-header proc "text/html" status)
+      (httpd-send-directory proc path uri-path))
+     (t (httpd-send-header
+         proc (httpd-get-mime (file-name-extension path)) status)
         (httpd-send-file proc path)))))
 
 ;; Logging
@@ -192,7 +196,7 @@ variable/value pairs, and the third is the fragment."
   (cond
    ((not (file-exists-p path))   404)
    ((not (file-readable-p path)) 403)
-   ((file-directory-p path)      403)
+   ((and (file-directory-p path) (not httpd-listings)) 403)
    (200)))
 
 (defun httpd-clean-path (path)
@@ -216,6 +220,14 @@ variable/value pairs, and the third is the fragment."
 
 ;; Data sending functions
 
+(defun httpd-escape-html (string)
+  "Properly encode HTML entities."
+  (let ((entities '(("&" . "&amp;")
+                    ("<" . "&lt;")
+                    (">" . "&gt;"))))
+    (reduce (lambda (s e) (replace-regexp-in-string (car e) (cdr e) s))
+            entities :initial-value string)))
+
 (defun httpd-send-header (proc mime status)
   "Send header with given MIME type."
   (let ((status-str (cdr (assq status httpd-status-codes))))
@@ -229,6 +241,25 @@ variable/value pairs, and the third is the fragment."
     (set-buffer-multibyte nil)
     (insert-file-contents path)
     (httpd-send-buffer proc (current-buffer))))
+
+(defun httpd-send-directory (proc path uri-path)
+  "Serve a file listing to the client."
+  (let ((title (concat "Directory listing for " (httpd-escape-html uri-path))))
+    (with-temp-buffer
+      (set-buffer-multibyte nil)
+      (insert "<!DOCTYPE html>\n")
+      (insert "<html>\n<head><title>" title "</title></head>\n")
+      (insert "<body>\n<h2>" title "</h2>\n<hr/>\n<ul>")
+      (dolist (file (directory-files path))
+        (unless (eq ?. (aref file 0))
+          (if (file-directory-p (expand-file-name file path))
+              (setq file (concat file "/")))
+          (insert "<li>")
+          (insert "<a href=\"" (httpd-escape-html file) "\">")
+          (insert (httpd-escape-html file))
+          (insert "</a></li>\n")))
+      (insert "</ul>\n<hr/>\n</body>\n</html>")
+      (httpd-send-buffer proc (current-buffer)))))
 
 (defun httpd-send-string (proc string)
   "Send string to client."
