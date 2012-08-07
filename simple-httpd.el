@@ -10,7 +10,8 @@
 
 ;; Use `httpd-start' to start the web server. The variable
 ;; `httpd-root' sets the server's root folder and `httpd-port' sets
-;; the listening port.
+;; the listening port. Naturally, the server needs to be restarted in
+;; order for a port change to take effect.
 
 ;;; Code:
 
@@ -60,19 +61,19 @@
   "HTTP status codes")
 
 (defvar httpd-html
-  '((404 . "<!DOCTYPE html>
-<html><head>
-<title>404 Not Found</title>
-</head><body>
-<h1>Not Found</h1>
-<p>The requested URL was not found on this server.</p>
-</body></html>")
-    (403 . "<!DOCTYPE html>
+  '((403 . "<!DOCTYPE html>
 <html><head>
 <title>403 Forbidden</title>
 </head><body>
 <h1>Forbidden</h1>
 <p>The requested URL is forbidden.</p>
+</body></html>")
+    (404 . "<!DOCTYPE html>
+<html><head>
+<title>404 Not Found</title>
+</head><body>
+<h1>Not Found</h1>
+<p>The requested URL was not found on this server.</p>
 </body></html>")
     (500 . "<!DOCTYPE html>
 <html><head>
@@ -259,10 +260,8 @@ variable/value pairs, and the third is the fragment."
             (unless (eq ?. (aref file 0))
               (if (file-directory-p (expand-file-name file path))
                   (setq file (concat file "/")))
-              (insert "<li>")
-              (insert "<a href=\"" (httpd-escape-html file) "\">")
-              (insert (httpd-escape-html file))
-              (insert "</a></li>\n")))
+              (let ((f (httpd-escape-html file)))
+                (insert (format "<li><a href=\"%s\">%s</a></li>\n" f f)))))
           (insert "</ul>\n<hr/>\n</body>\n</html>")
           (httpd-send-buffer proc (current-buffer)))
       (httpd-send-header proc "text/plain" 301
@@ -277,8 +276,7 @@ variable/value pairs, and the third is the fragment."
 (defun httpd-send-buffer (proc buffer)
   "Send buffer to client."
   (with-current-buffer buffer
-    (httpd-send-string proc (buffer-substring (point-min)
-                                              (point-max)))))
+    (httpd-send-string proc (buffer-substring (point-min) (point-max)))))
 
 (defun httpd-error (proc status)
   "Handle an error situation."
