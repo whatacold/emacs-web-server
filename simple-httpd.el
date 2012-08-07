@@ -53,9 +53,10 @@
 
 (defvar httpd-status-codes
   '((200 . "OK")
+    (301 . "Moved Permanently")
     (403 . "Forbidden")
-    (500 . "Internal Server Error")
-    (404 . "Not Found"))
+    (404 . "Not Found")
+    (500 . "Internal Server Error"))
   "HTTP status codes")
 
 (defvar httpd-html
@@ -129,7 +130,6 @@
     (cond
      ((not (= status 200)) (httpd-error proc status))
      ((file-directory-p path)
-      (httpd-send-header proc "text/html" status)
       (httpd-send-directory proc path uri-path))
      (t (httpd-send-header
          proc (httpd-get-mime (file-name-extension path)) status)
@@ -248,21 +248,26 @@ variable/value pairs, and the third is the fragment."
 (defun httpd-send-directory (proc path uri-path)
   "Serve a file listing to the client."
   (let ((title (concat "Directory listing for " (httpd-escape-html uri-path))))
-    (with-temp-buffer
-      (set-buffer-multibyte nil)
-      (insert "<!DOCTYPE html>\n")
-      (insert "<html>\n<head><title>" title "</title></head>\n")
-      (insert "<body>\n<h2>" title "</h2>\n<hr/>\n<ul>")
-      (dolist (file (directory-files path))
-        (unless (eq ?. (aref file 0))
-          (if (file-directory-p (expand-file-name file path))
-              (setq file (concat file "/")))
-          (insert "<li>")
-          (insert "<a href=\"" (httpd-escape-html file) "\">")
-          (insert (httpd-escape-html file))
-          (insert "</a></li>\n")))
-      (insert "</ul>\n<hr/>\n</body>\n</html>")
-      (httpd-send-buffer proc (current-buffer)))))
+    (if (equal "/" (substring uri-path -1))
+        (with-temp-buffer
+          (httpd-send-header proc "text/html" 200)
+          (set-buffer-multibyte nil)
+          (insert "<!DOCTYPE html>\n")
+          (insert "<html>\n<head><title>" title "</title></head>\n")
+          (insert "<body>\n<h2>" title "</h2>\n<hr/>\n<ul>")
+          (dolist (file (directory-files path))
+            (unless (eq ?. (aref file 0))
+              (if (file-directory-p (expand-file-name file path))
+                  (setq file (concat file "/")))
+              (insert "<li>")
+              (insert "<a href=\"" (httpd-escape-html file) "\">")
+              (insert (httpd-escape-html file))
+              (insert "</a></li>\n")))
+          (insert "</ul>\n<hr/>\n</body>\n</html>")
+          (httpd-send-buffer proc (current-buffer)))
+      (httpd-send-header proc "text/plain" 301
+                         (cons "Location" (concat uri-path "/")))
+      (httpd-send-string proc ""))))
 
 (defun httpd-send-string (proc string)
   "Send string to client."
