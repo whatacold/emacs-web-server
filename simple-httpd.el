@@ -192,7 +192,7 @@
       (push (list (car (split-string line ": "))
                   (mapconcat 'identity
                              (cdr (split-string line ": ")) ": ")) req))
-    (cddr req)))
+    (cdr req)))
 
 (defun httpd-parse-uri (uri)
   "Split a URI into it's components. In the return, the first
