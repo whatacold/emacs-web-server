@@ -40,3 +40,13 @@
     (should (equal (cadr (assoc "v" args)) "10"))
     (should (equal (cadr (assoc "q" args)) "test&case"))
     (should (equal fragment "page10"))))
+
+(ert-deftest httpd-send-header-test ()
+  "Test server header output."
+  (let ((header ""))
+    (flet ((process-send-string (proc str) (setq header (concat header str))))
+      (httpd-send-header nil "text/html" 404 (cons "Foo" "bar")))
+    (let ((out (httpd-parse header)))
+      (should (equal (cadr (assoc "HTTP/1.0" out)) "404"))
+      (should (equal (cadr (assoc "Content-Type" out)) "text/html"))
+      (should (equal (cadr (assoc "Foo" out)) "bar")))))
