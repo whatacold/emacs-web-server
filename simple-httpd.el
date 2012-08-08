@@ -16,6 +16,7 @@
 ;;; Code:
 
 (require 'cl)
+(require 'pp)
 
 (defgroup simple-httpd nil
   "A simple web server."
@@ -111,8 +112,7 @@
   "Start the emacs web server."
   (interactive)
   (httpd-stop)
-  (httpd-clear-log)
-  (httpd-log-alist `(start ,(current-time-string)))
+  (httpd-log `(start ,(current-time-string)))
   (make-network-process
    :name     "httpd"
    :service  httpd-port
@@ -124,8 +124,9 @@
 (defun httpd-stop ()
   "Stop the emacs web server."
   (interactive)
-  (if (process-status "httpd") (delete-process "httpd"))
-  (httpd-log-alist `(stop ,(current-time-string))))
+  (when (process-status "httpd")
+    (delete-process "httpd")
+    (httpd-log `(stop ,(current-time-string)))))
 
 ;; Networking code
 
@@ -147,7 +148,7 @@
                     (append '(req) req)
                     `(path ,path)
                     `(status ,status)))
-    (httpd-log-alist log)
+    (httpd-log log)
     (cond
      ((not (= status 200)) (httpd-error proc status))
      ((file-directory-p path)
@@ -158,29 +159,17 @@
 
 ;; Logging
 
-(defun httpd-log-string (string)
-  "Add string to the web server log."
+(defun httpd-log (item)
+  "Pretty print a lisp object to the log."
   (with-current-buffer (get-buffer-create "*httpd*")
-    (goto-char (point-max))
-    (insert string)))
-
-(defun httpd-log-alist (item &optional sp)
-  "Add alist to the log."
-  (if (not sp) (setq sp 2))
-  (with-current-buffer (get-buffer-create "*httpd*")
-    (goto-char (- (point-max) 2))
-    (insert "\n" (make-string sp 32))
-    (if (atom (cadr item)) (insert (format "%S" item))
-      (insert "(" (symbol-name (car item)))
-      (dolist (el (cdr item))
-        (httpd-log-alist el (+ 1 sp)))
-      (insert ")"))))
-
-(defun httpd-clear-log ()
-  "Clear the web server log."
-  (with-current-buffer (get-buffer-create "*httpd*")
-    (erase-buffer)
-    (httpd-log-string "(log)\n")))
+    (setq buffer-read-only nil)
+    (let ((follow (= (point) (point-max))))
+      (save-excursion
+        (goto-char (point-max))
+        (pp item (current-buffer)))
+      (if follow (goto-char (point-max))))
+    (setq buffer-read-only t)
+    (set-buffer-modified-p nil)))
 
 ;; Request parsing
 
