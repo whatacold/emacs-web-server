@@ -89,6 +89,7 @@
 </head><body>
 <h1>Forbidden</h1>
 <p>The requested URL is forbidden.</p>
+<pre>%s</pre>
 </body></html>")
     (404 . "<!DOCTYPE html>
 <html><head>
@@ -96,6 +97,7 @@
 </head><body>
 <h1>Not Found</h1>
 <p>The requested URL was not found on this server.</p>
+<pre>%s</pre>
 </body></html>")
     (500 . "<!DOCTYPE html>
 <html><head>
@@ -103,6 +105,7 @@
 </head><body>
 <h1>500 Internal Error</h1>
 <p>Internal error when handling this request.</p>
+<pre>%s</pre>
 </body></html>"))
   "HTML for various errors.")
 
@@ -289,10 +292,17 @@ variable/value pairs, and the third is the fragment."
   (with-current-buffer buffer
     (httpd-send-string proc (buffer-substring (point-min) (point-max)))))
 
-(defun httpd-error (proc status)
-  "Handle an error situation."
+(defun httpd-error (proc status &optional info)
+  "Send an error page appropriate for STATUS to the client,
+optionally inserting object INFO into page."
+  (httpd-log `(error ,status ,info))
   (httpd-send-header proc "text/html" status)
-  (httpd-send-string proc (cdr (assq status httpd-html))))
+  (with-temp-buffer
+    (insert (format (cdr (assq status httpd-html))
+                    (if info
+                        (httpd-escape-html (format "error: %s"  info))
+                      "")))
+    (httpd-send-buffer proc (current-buffer))))
 
 (provide 'simple-httpd)
 
