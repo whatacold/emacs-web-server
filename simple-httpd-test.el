@@ -69,3 +69,10 @@
       (should (eq (httpd-status "/some/file") 403)))
     (let ((httpd-listings t))
       (should (eq (httpd-status "/some/file") 200)))))
+
+(ert-deftest httpd-get-servlet-test ()
+  (flet ((httpd/foo/bar () t))
+    (let ((httpd-servlets t))
+      (should (eq (httpd-get-servlet "/foo/bar")     'httpd/foo/bar))
+      (should (eq (httpd-get-servlet "/foo/bar/baz") 'httpd/foo/bar))
+      (should (eq (httpd-get-servlet "/undefined")   'httpd/)))))

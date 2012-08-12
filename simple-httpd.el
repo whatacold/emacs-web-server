@@ -4,14 +4,56 @@
 
 ;; Author: Christopher Wellons <mosquitopsu@gmail.com>
 ;; URL: https://github.com/skeeto/emacs-http-server
-;; Version: 1.0
+;; Version: 1.1
 
 ;;; Commentary:
 
-;; Use `httpd-start' to start the web server. The variable
-;; `httpd-root' sets the server's root folder and `httpd-port' sets
-;; the listening port. Naturally, the server needs to be restarted in
-;; order for a port change to take effect.
+;; Use `httpd-start' to start the web server. Files are served from
+;; `httpd-root' on port `httpd-port'. While the root can be changed at
+;; any time, the server needs to be restarted in order for a port
+;; change to take effect.
+
+;; Everything is performed by servlets, including serving
+;; files. Servlets are enabled by setting `httpd-servlets' to
+;; true. Servlets are four-parameter functions that begin with
+;; "httpd/" where the trailing component specifies the initial path on
+;; the server. For example, the function `httpd/hello-world' will be
+;; called for the request "/hello-world" and "/hello-world/foo".
+
+;; The default servlet `httpd/' is the one that serves files from
+;; `httpd-root' and can be turned off through redefinition or setting
+;; `httpd-serve-files' to nil. It is used even when `httpd-servlets'
+;; is nil.
+
+;; The four parameters for a servlet are process, URI path, URI
+;; parameters (alist), and the full request object (header
+;; alist). These are ordered by general importance so that some can be
+;; ignored. Two macros are provided to help with writing servlets.
+
+;;  * `with-httpd-buffer' -- Creates a temporary buffer that is
+;;    automatically served to the client at the end of the body. For
+;;    example, this servlet says hello,
+
+;;     (defun httpd/hello-world (proc path &rest args)
+;;       (with-httpd-buffer proc "text/plain"
+;;         (insert "hello, " (file-name-nondirectory path))))
+
+;; This servlet be viewed at http://localhost:8080/hello-world/Emacs
+
+;; * `defservlet' -- Similar to the above macro but totally hides the
+;;   process object from the servlet itself. The above servlet can be
+;;   re-written identically like so,
+
+;;     (defservlet hello-world text/plain (path)
+;;       (insert "hello, " (file-name-nondirectory path)))
+
+;; The "function parameters" part can be left empty or contain up to
+;; three parameters corresponding to the final three servlet
+;; parameters. For example, a servlet that shows *scratch* and doesn't
+;; need parameters,
+
+;;     (defservlet scratch text/plain ()
+;;       (insert-buffer (get-buffer-create "*scratch*")))
 
 ;;; Code:
 
@@ -32,8 +74,18 @@
   :group 'simple-httpd
   :type 'directory)
 
+(defcustom httpd-serve-files t
+  "Enable serving files from httpd-root."
+  :group 'simple-httpd
+  :type 'boolean)
+
 (defcustom httpd-listings t
   "If true, serve directory listings."
+  :group 'simple-httpd
+  :type 'boolean)
+
+(defcustom httpd-servlets nil
+  "Enable servlets."
   :group 'simple-httpd
   :type 'boolean)
 
@@ -136,30 +188,21 @@
 
 (defun httpd-filter (proc string)
   "Runs each time client makes a request."
-  (let* ((log '(connection))
-         (req (httpd-parse string))
-         (uri (cadr (assoc "GET" req)))
+  (let* ((request (httpd-parse string))
+         (uri (cadr (assoc "GET" request)))
          (parsed-uri (httpd-parse-uri uri))
          (uri-path (nth 0 parsed-uri))
          (uri-query (nth 1 parsed-uri))
-         (uri-target (nth 2 parsed-uri))
-         (path (httpd-gen-path uri-path))
-         (status (httpd-status path)))
-    (setq log (list 'connection
-                    `(date ,(current-time-string))
-                    `(address ,(car (process-contact proc)))
-                    `(get ,uri-path)
-                    (append '(req) req)
-                    `(path ,path)
-                    `(status ,status)))
-    (httpd-log log)
-    (cond
-     ((not (= status 200)) (httpd-error proc status))
-     ((file-directory-p path)
-      (httpd-send-directory proc path uri-path))
-     (t (httpd-send-header
-         proc (httpd-get-mime (file-name-extension path)) status)
-        (httpd-send-file proc path)))))
+         (servlet (httpd-get-servlet uri-path)))
+    (httpd-log `(request (date ,(current-time-string))
+                         (address ,(car (process-contact proc)))
+                         (get ,uri-path)
+                         ,(cons 'headers request)))
+    (if (null servlet)
+        (httpd-error proc 404)
+      (condition-case error-case
+          (funcall servlet proc uri-path uri-query request)
+        (error (httpd-error proc 500 error-case))))))
 
 ;; Logging
 
@@ -174,6 +217,39 @@
       (if follow (goto-char (point-max))))
     (setq buffer-read-only t)
     (set-buffer-modified-p nil)))
+
+;; Servlets
+
+(defmacro with-httpd-buffer (proc mime &rest body)
+  "Create a temporary buffer and, after the body, automatically
+serve it to an HTTP client with HTTP header indicating the
+specified MIME type."
+  (declare (indent defun))
+  `(with-temp-buffer
+     ,@body
+     (httpd-send-header ,proc ,mime 200)
+     (httpd-send-buffer ,proc (current-buffer))))
+
+(defmacro defservlet (name mime path-query-request &rest body)
+  "Defines a simple httpd servelet. The servlet runs in a
+temporary buffer which is automatically served to the client
+along with a header.
+
+A servlet that serves the contents of *scratch*,
+
+    (defservlet scratch text/plain ()
+      (insert-buffer (get-buffer-create \"*scratch*\")))
+
+A servlet that says hello,
+
+    (defservlet hello-world text/plain (path)
+      (insert \"hello, \" (file-name-nondirectory path))))"
+  (declare (indent defun))
+  (let ((proc-sym (make-symbol "proc"))
+        (fname (intern (concat "httpd/" (symbol-name name)))))
+    `(defun ,fname (,proc-sym ,@path-query-request &rest ,(gensym))
+       (with-httpd-buffer ,proc-sym ,(symbol-name mime)
+         ,@body))))
 
 ;; Request parsing
 
@@ -228,6 +304,27 @@ variable/value pairs, and the third is the fragment."
           (or (car existing) dir))
       clean)))
 
+(defun httpd-get-servlet (uri-path)
+  "Determine the servlet to be executed for URI-PATH."
+  (if (not httpd-servlets)
+      'httpd/
+    (flet ((cat (x) (concat "httpd/" (mapconcat 'identity (reverse x) "/"))))
+      (let ((parts (cdr (split-string (directory-file-name uri-path) "/"))))
+        (or
+         (find-if 'fboundp (mapcar 'intern-soft (maplist 'cat (reverse parts))))
+         'httpd/)))))
+
+(defun httpd/ (proc uri-path &rest args)
+  "Default root servlet which serves files when httpd-serve-files is T."
+  (if httpd-serve-files
+      (let* ((path (httpd-gen-path uri-path))
+             (status (httpd-status path)))
+        (cond
+         ((not (= status 200))    (httpd-error          proc status))
+         ((file-directory-p path) (httpd-send-directory proc path uri-path))
+         (t                       (httpd-send-file      proc path))))
+    (httpd-error proc 403)))
+
 (defun httpd-get-mime (ext)
   "Fetch MIME type given the file extention."
   (or (and ext (cdr (assoc (downcase ext) httpd-mime-types)))
@@ -253,9 +350,11 @@ variable/value pairs, and the third is the fragment."
       (insert "\r\n")
       (process-send-string proc (buffer-string)))))
 
-(defun httpd-send-file (proc path)
+(defun httpd-send-file (proc path &optional no-header)
   "Serve file to the given client."
   (httpd-log `(file ,path))
+  (unless no-header
+    (httpd-send-header proc (httpd-get-mime (file-name-extension path)) 200))
   (with-temp-buffer
     (set-buffer-multibyte nil)
     (insert-file-contents path)
