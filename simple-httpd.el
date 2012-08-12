@@ -255,6 +255,7 @@ variable/value pairs, and the third is the fragment."
 
 (defun httpd-send-file (proc path)
   "Serve file to the given client."
+  (httpd-log `(file ,path))
   (with-temp-buffer
     (set-buffer-multibyte nil)
     (insert-file-contents path)
@@ -265,6 +266,7 @@ variable/value pairs, and the third is the fragment."
   (let ((title (concat "Directory listing for " (httpd-escape-html uri-path))))
     (if (equal "/" (substring uri-path -1))
         (with-temp-buffer
+          (httpd-log `(directory ,path))
           (httpd-send-header proc "text/html" 200)
           (set-buffer-multibyte nil)
           (insert "<!DOCTYPE html>\n")
@@ -278,9 +280,10 @@ variable/value pairs, and the third is the fragment."
                 (insert (format "<li><a href=\"%s\">%s</a></li>\n" f f)))))
           (insert "</ul>\n<hr/>\n</body>\n</html>")
           (httpd-send-buffer proc (current-buffer)))
-      (httpd-send-header proc "text/plain" 301
-                         (cons "Location" (concat uri-path "/")))
-      (httpd-send-string proc ""))))
+      (let ((redirect (concat uri-path "/")))
+        (httpd-log (list 'redirect redirect))
+        (httpd-send-header proc "text/plain" 301 (cons "Location" redirect))
+        (httpd-send-string proc "")))))
 
 (defun httpd-send-string (proc string)
   "Send string to client."
