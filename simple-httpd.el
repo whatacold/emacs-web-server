@@ -96,6 +96,7 @@
     ("jpeg" . "image/jpeg")
     ("tif"  . "image/tif")
     ("tiff" . "image/tiff")
+    ("ico"  . "image/x-icon")
     ("svg"  . "image/svg+xml")
     ("css"  . "text/css")
     ("htm"  . "text/html")
