@@ -115,6 +115,7 @@
     ("xml"  . "text/xml")
     ("txt"  . "text/plain")
     ("el"   . "text/plain")
+    ("js"   . "text/javascript")
     ("gz"   . "application/octet-stream")
     ("ps"   . "application/postscript")
     ("eps"  . "application/postscript")
