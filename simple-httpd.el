@@ -188,7 +188,7 @@ per Emacs instance."
    :service  httpd-port
    :server   t
    :family   'ipv4
-   :filter   'httpd-filter)
+   :filter   'httpd--filter)
   (run-hooks 'httpd-start-hook))
 
 ;;;###autoload
@@ -203,7 +203,7 @@ otherwise do nothing."
 
 ;; Networking code
 
-(defun httpd-filter (proc string)
+(defun httpd--filter (proc string)
   "Runs each time client makes a request."
   (let* ((request (httpd-parse string))
          (uri (cadr (assoc "GET" request)))
