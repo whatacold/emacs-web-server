@@ -1,4 +1,11 @@
-;; emacs -batch -L . -l simple-httpd-test.el -f ert-run-tests-batch
+;;; simple-httpd-test.el --- simple-httpd unit tests
+
+;;; Commentary:
+
+;; Run standalone with this,
+;;   emacs -batch -L . -l simple-httpd-test.el -f ert-run-tests-batch
+
+;;; Code:
 
 (require 'ert)
 (require 'simple-httpd)
@@ -71,3 +78,5 @@
       (should (eq (httpd-get-servlet "/foo/bar")     'httpd/foo/bar))
       (should (eq (httpd-get-servlet "/foo/bar/baz") 'httpd/foo/bar))
       (should (eq (httpd-get-servlet "/undefined")   'httpd/)))))
+
+;;; simple-httpd-test.el ends here
