@@ -53,7 +53,7 @@
 ;; need parameters,
 
 ;;     (defservlet scratch text/plain ()
-;;       (insert-buffer (get-buffer-create "*scratch*")))
+;;       (insert-buffer-substring (get-buffer-create "*scratch*")))
 
 ;;; Code:
 
@@ -256,7 +256,7 @@ along with a header.
 A servlet that serves the contents of *scratch*,
 
     (defservlet scratch text/plain ()
-      (insert-buffer (get-buffer-create \"*scratch*\")))
+      (insert-buffer-substring (get-buffer-create \"*scratch*\")))
 
 A servlet that says hello,
 
