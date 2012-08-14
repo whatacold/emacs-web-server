@@ -59,6 +59,7 @@
 
 (require 'cl)
 (require 'pp)
+(require 'url-util)
 
 (defgroup simple-httpd nil
   "A simple web server."
@@ -277,7 +278,7 @@ variable/value pairs, and the third is the fragment."
                            (mapcar 'url-unhex-string (split-string str "=")))
                          (split-string (substring uri (1+ p1) p2) "&")))
           retval)
-    (push (substring uri 0 (or p1 p2))
+    (push (url-unhex-string (substring uri 0 (or p1 p2)))
           retval)))
 
 ;; Path handling
@@ -293,7 +294,7 @@ variable/value pairs, and the third is the fragment."
 (defun httpd-clean-path (path)
   "Clean dangerous .. from the path and remove the leading /."
   (mapconcat 'identity
-   (delete "" (delete ".." (split-string (url-unhex-string path) "/"))) "/"))
+             (delete "" (delete ".." (split-string path "/"))) "/"))
 
 (defun httpd-gen-path (path)
   "Translate GET to secure path in httpd-root."
@@ -333,14 +334,6 @@ variable/value pairs, and the third is the fragment."
 
 ;; Data sending functions
 
-(defun httpd-escape-html (string)
-  "Properly encode HTML entities."
-  (let ((entities '(("&" . "&amp;")
-                    ("<" . "&lt;")
-                    (">" . "&gt;"))))
-    (reduce (lambda (s e) (replace-regexp-in-string (car e) (cdr e) s))
-            entities :initial-value string)))
-
 (defun httpd-send-header (proc mime status &rest extra-headers)
   "Send an HTTP header with given MIME type."
   (let ((status-str (cdr (assq status httpd-status-codes))))
@@ -363,7 +356,8 @@ variable/value pairs, and the third is the fragment."
 
 (defun httpd-send-directory (proc path uri-path)
   "Serve a file listing to the client."
-  (let ((title (concat "Directory listing for " (httpd-escape-html uri-path))))
+  (let ((title (concat "Directory listing for "
+                       (url-insert-entities-in-string uri-path))))
     (if (equal "/" (substring uri-path -1))
         (with-temp-buffer
           (httpd-log `(directory ,path))
@@ -374,10 +368,12 @@ variable/value pairs, and the third is the fragment."
           (insert "<body>\n<h2>" title "</h2>\n<hr/>\n<ul>")
           (dolist (file (directory-files path))
             (unless (eq ?. (aref file 0))
-              (if (file-directory-p (expand-file-name file path))
-                  (setq file (concat file "/")))
-              (let ((f (httpd-escape-html file)))
-                (insert (format "<li><a href=\"%s\">%s</a></li>\n" f f)))))
+              (let* ((full (expand-file-name file path))
+                     (tail (if (file-directory-p full) "/" ""))
+                     (f (url-insert-entities-in-string file))
+                     (l (url-hexify-string file)))
+                (insert (format "<li><a href=\"%s%s\">%s%s</a></li>\n"
+                                l tail f tail)))))
           (insert "</ul>\n<hr/>\n</body>\n</html>")
           (httpd-send-buffer proc (current-buffer)))
       (let ((redirect (concat uri-path "/")))
@@ -401,10 +397,9 @@ optionally inserting object INFO into page."
   (httpd-log `(error ,status ,info))
   (httpd-send-header proc "text/html" status)
   (with-temp-buffer
-    (insert (format (cdr (assq status httpd-html))
-                    (if info
-                        (httpd-escape-html (format "error: %s"  info))
-                      "")))
+    (let ((html (cdr (assq status httpd-html)))
+          (erro (url-insert-entities-in-string (format "error: %s"  info))))
+      (insert (format html (if info erro ""))))
     (httpd-send-buffer proc (current-buffer))))
 
 (provide 'simple-httpd)

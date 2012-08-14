@@ -3,12 +3,6 @@
 (require 'ert)
 (require 'simple-httpd)
 
-(ert-deftest httpd-escape-html-test ()
-  "Test HTML escaping."
-  (should (equal (httpd-escape-html "Dad & Son") "Dad &amp; Son"))
-  (should (equal (httpd-escape-html "<b>bold</b>") "&lt;b&gt;bold&lt;/b&gt;"))
-  (should (equal (httpd-escape-html "<a&b>") "&lt;a&amp;b&gt;")))
-
 (ert-deftest httpd-clean-path-test ()
   "Ensure that paths are sanitized properly."
   (should (equal (httpd-clean-path "/") ""))
@@ -32,11 +26,11 @@
 
 (ert-deftest httpd-parse-uri-test ()
   "Test URI parsing."
-  (let* ((url "/foo/bar.html?q=test%26case&v=10#page10")
+  (let* ((url "/foo/bar%20baz.html?q=test%26case&v=10#page10")
          (p (httpd-parse-uri url))
          (args (cadr p))
          (fragment (caddr p)))
-    (should (equal (car p) "/foo/bar.html"))
+    (should (equal (car p) "/foo/bar baz.html"))
     (should (equal (cadr (assoc "v" args)) "10"))
     (should (equal (cadr (assoc "q" args)) "test&case"))
     (should (equal fragment "page10"))))
@@ -71,6 +65,7 @@
       (should (eq (httpd-status "/some/file") 200)))))
 
 (ert-deftest httpd-get-servlet-test ()
+  "Test servlet dispatch."
   (flet ((httpd/foo/bar () t))
     (let ((httpd-servlets t))
       (should (eq (httpd-get-servlet "/foo/bar")     'httpd/foo/bar))
