@@ -405,7 +405,7 @@ variable/value pairs, and the third is the fragment."
 (defun httpd-send-buffer (proc buffer)
   "Send BUFFER to client and close the connection."
   (with-current-buffer buffer
-    (httpd-send-string proc (buffer-substring (point-min) (point-max)))))
+    (httpd-send-string proc (buffer-string))))
 
 (defun httpd-error (proc status &optional info)
   "Send an error page appropriate for STATUS to the client,
