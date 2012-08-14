@@ -397,12 +397,12 @@ variable/value pairs, and the third is the fragment."
         (httpd-send-string proc "")))))
 
 (defun httpd-send-string (proc string)
-  "Send string to client."
+  "Send STRING to the client and close the connection."
   (process-send-string proc string)
   (process-send-eof proc))
 
 (defun httpd-send-buffer (proc buffer)
-  "Send buffer to client."
+  "Send BUFFER to client and close the connection."
   (with-current-buffer buffer
     (httpd-send-string proc (buffer-substring (point-min) (point-max)))))
 
