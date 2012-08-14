@@ -4,7 +4,7 @@
 
 ;; Author: Christopher Wellons <mosquitopsu@gmail.com>
 ;; URL: https://github.com/skeeto/emacs-http-server
-;; Version: 1.1
+;; Version: 1.1.1
 
 ;;; Commentary:
 
