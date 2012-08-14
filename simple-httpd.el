@@ -90,6 +90,16 @@
   :group 'simple-httpd
   :type 'boolean)
 
+(defcustom httpd-start-hook nil
+  "Hook to run when the server has started."
+  :group 'simple-httpd
+  :type 'hook)
+
+(defcustom httpd-stop-hook nil
+  "Hook to run when the server has stopped."
+  :group 'simple-httpd
+  :type 'hook)
+
 (defvar httpd-mime-types
   '(("png"  . "image/png")
     ("gif"  . "image/gif")
@@ -167,7 +177,9 @@
 
 ;;;###autoload
 (defun httpd-start ()
-  "Start the emacs web server."
+  "Start the emacs web server. If the server is already running,
+this will restart the server. There is only one server instance
+per Emacs instance."
   (interactive)
   (httpd-stop)
   (httpd-log `(start ,(current-time-string)))
@@ -176,15 +188,18 @@
    :service  httpd-port
    :server   t
    :family   'ipv4
-   :filter   'httpd-filter))
+   :filter   'httpd-filter)
+  (run-hooks 'httpd-start-hook))
 
 ;;;###autoload
 (defun httpd-stop ()
-  "Stop the emacs web server."
+  "Stop the emacs web server if it is currently running,
+otherwise do nothing."
   (interactive)
   (when (process-status "httpd")
     (delete-process "httpd")
-    (httpd-log `(stop ,(current-time-string)))))
+    (httpd-log `(stop ,(current-time-string)))
+    (run-hooks 'httpd-stop-hook)))
 
 ;; Networking code
 
