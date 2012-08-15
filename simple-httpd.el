@@ -189,7 +189,8 @@ per Emacs instance."
    :service  httpd-port
    :server   t
    :family   'ipv4
-   :filter   'httpd--filter)
+   :filter   'httpd--filter
+   :log      'httpd--log)
   (run-hooks 'httpd-start-hook))
 
 ;;;###autoload
@@ -221,6 +222,10 @@ otherwise do nothing."
       (condition-case error-case
           (funcall servlet proc uri-path uri-query request)
         (error (httpd-error proc 500 error-case))))))
+
+(defun httpd--log (server proc message)
+  "Runs each time a new client connects."
+  (httpd-log (list 'connection (car (process-contact proc)))))
 
 ;; Logging
 
@@ -354,7 +359,7 @@ variable/value pairs, and the third is the fragment."
   "Send an HTTP header with given MIME type."
   (let ((status-str (cdr (assq status httpd-status-codes)))
         (headers (append (list (cons "Content-Type" mime)
-                               (cons "Connection" "close"))
+                               (cons "Connection" "keep-alive"))
                          extra-headers)))
     (with-temp-buffer
       (insert (format "HTTP/1.1 %d %s\r\n" status status-str))
@@ -414,12 +419,11 @@ variable/value pairs, and the third is the fragment."
     size))
 
 (defun httpd-send-buffer (proc buffer)
-  "Send BUFFER to client and close the connection."
+  "Send BUFFER to client."
   (let ((h (format "Content-Length: %d\r\n\r\n" (httpd--buffer-size buffer))))
     (process-send-string proc h))
   (with-current-buffer buffer
-    (process-send-region proc (point-min) (point-max))
-    (process-send-eof proc)))
+    (process-send-region proc (point-min) (point-max))))
 
 (defun httpd-error (proc status &optional info)
   "Send an error page appropriate for STATUS to the client,
