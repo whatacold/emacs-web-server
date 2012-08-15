@@ -145,6 +145,7 @@
 (defvar httpd-status-codes
   '((200 . "OK")
     (301 . "Moved Permanently")
+    (304 . "Not Modified")
     (403 . "Forbidden")
     (404 . "Not Found")
     (500 . "Internal Server Error"))
@@ -211,6 +212,11 @@ otherwise do nothing."
 (defun httpd-date-string (&optional date)
   "Return an HTTP date string (RFC 1123)."
   (format-time-string "%a, %e %b %Y %T %Z" (or date (current-time))))
+
+(defun httpd-etag (file)
+  "Compute the ETag for the given file."
+  (concat "\"" (substring (sha1 (prin1-to-string (file-attributes file))) -16)
+          "\""))
 
 ;; Networking code
 
@@ -346,7 +352,7 @@ variable/value pairs, and the third is the fragment."
          (find-if 'fboundp (mapcar 'intern-soft (maplist 'cat (reverse parts))))
          'httpd/)))))
 
-(defun httpd/ (proc uri-path &rest args)
+(defun httpd/ (proc uri-path query request)
   "Default root servlet which serves files when httpd-serve-files is T."
   (if httpd-serve-files
       (let* ((path (httpd-gen-path uri-path))
@@ -354,7 +360,7 @@ variable/value pairs, and the third is the fragment."
         (cond
          ((not (= status 200))    (httpd-error          proc status))
          ((file-directory-p path) (httpd-send-directory proc path uri-path))
-         (t                       (httpd-send-file      proc path))))
+         (t                       (httpd-send-file      proc path request))))
     (httpd-error proc 403)))
 
 (defun httpd-get-mime (ext)
@@ -385,16 +391,24 @@ variable/value pairs, and the third is the fragment."
   (with-temp-buffer
     (httpd-send-buffer proc (current-buffer))))
 
-(defun httpd-send-file (proc path)
+(defun httpd-send-file (proc path &optional req)
   "Serve file to the given client."
-  (httpd-log `(file ,path))
-  (let ((mtime (httpd-date-string (nth 4 (file-attributes path)))))
-    (httpd-send-header proc (httpd-get-mime (file-name-extension path)) 200
-                       (cons "Last-Modified" mtime)))
-  (with-temp-buffer
-    (set-buffer-multibyte nil)
-    (insert-file-contents path)
-    (httpd-send-buffer proc (current-buffer))))
+  (let ((req-etag (cadr (assoc "If-None-Match" req)))
+        (etag (httpd-etag path))
+        (mtime (httpd-date-string (nth 4 (file-attributes path)))))
+    (if (equal req-etag etag)
+        (with-temp-buffer
+          (httpd-log `(file ,path not-modified))
+          (httpd-send-header proc "text/plain" 304)
+          (httpd-send-buffer proc (current-buffer)))
+      (httpd-log `(file ,path))
+      (httpd-send-header proc (httpd-get-mime (file-name-extension path)) 200
+                         (cons "Last-Modified" mtime)
+                         (cons "ETag" etag))
+      (with-temp-buffer
+        (set-buffer-multibyte nil)
+        (insert-file-contents path)
+        (httpd-send-buffer proc (current-buffer))))))
 
 (defun httpd-send-directory (proc path uri-path)
   "Serve a file listing to the client."
