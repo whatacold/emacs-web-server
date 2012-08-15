@@ -100,6 +100,9 @@
   :group 'simple-httpd
   :type 'hook)
 
+(defvar httpd-server-name (format "simple-httpd (Emacs %s)" emacs-version)
+  "String to use in the Server header.")
+
 (defvar httpd-mime-types
   '(("png"  . "image/png")
     ("gif"  . "image/gif")
@@ -203,6 +206,12 @@ otherwise do nothing."
     (httpd-log `(stop ,(current-time-string)))
     (run-hooks 'httpd-stop-hook)))
 
+;; Utility
+
+(defun httpd-date-string (&optional date)
+  "Return an HTTP date string (RFC 1123)."
+  (format-time-string "%a, %e %b %Y %T %Z" (or date (current-time))))
+
 ;; Networking code
 
 (defun httpd--filter (proc string)
@@ -213,7 +222,7 @@ otherwise do nothing."
          (uri-path (nth 0 parsed-uri))
          (uri-query (nth 1 parsed-uri))
          (servlet (httpd-get-servlet uri-path)))
-    (httpd-log `(request (date ,(current-time-string))
+    (httpd-log `(request (date ,(httpd-date-string))
                          (address ,(car (process-contact proc)))
                          (get ,uri-path)
                          ,(cons 'headers request)))
@@ -358,8 +367,10 @@ variable/value pairs, and the third is the fragment."
 (defun httpd-send-header (proc mime status &rest extra-headers)
   "Send an HTTP header with given MIME type."
   (let ((status-str (cdr (assq status httpd-status-codes)))
-        (headers (append (list (cons "Content-Type" mime)
-                               (cons "Connection" "keep-alive"))
+        (headers (append (list (cons "Server" httpd-server-name)
+                               (cons "Date" (httpd-date-string))
+                               (cons "Connection" "keep-alive")
+                               (cons "Content-Type" mime))
                          extra-headers)))
     (with-temp-buffer
       (insert (format "HTTP/1.1 %d %s\r\n" status status-str))
