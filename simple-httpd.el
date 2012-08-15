@@ -385,11 +385,12 @@ variable/value pairs, and the third is the fragment."
   (with-temp-buffer
     (httpd-send-buffer proc (current-buffer))))
 
-(defun httpd-send-file (proc path &optional no-header)
+(defun httpd-send-file (proc path)
   "Serve file to the given client."
   (httpd-log `(file ,path))
-  (unless no-header
-    (httpd-send-header proc (httpd-get-mime (file-name-extension path)) 200))
+  (let ((mtime (httpd-date-string (nth 4 (file-attributes path)))))
+    (httpd-send-header proc (httpd-get-mime (file-name-extension path)) 200
+                       (cons "Last-Modified" mtime)))
   (with-temp-buffer
     (set-buffer-multibyte nil)
     (insert-file-contents path)
