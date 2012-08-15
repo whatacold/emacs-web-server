@@ -1,4 +1,4 @@
-;;; simple-httpd.el --- HTTP/1.0 web server
+;;; simple-httpd.el --- pure elisp HTTP server
 
 ;; This is free and unencumbered software released into the public domain.
 
@@ -352,10 +352,13 @@ variable/value pairs, and the third is the fragment."
 
 (defun httpd-send-header (proc mime status &rest extra-headers)
   "Send an HTTP header with given MIME type."
-  (let ((status-str (cdr (assq status httpd-status-codes))))
+  (let ((status-str (cdr (assq status httpd-status-codes)))
+        (headers (append (list (cons "Content-Type" mime)
+                               (cons "Connection" "close"))
+                         extra-headers)))
     (with-temp-buffer
-      (insert (format "HTTP/1.0 %d %s\r\n" status status-str))
-      (dolist (header (cons (cons "Content-Type" mime) extra-headers))
+      (insert (format "HTTP/1.1 %d %s\r\n" status status-str))
+      (dolist (header headers)
         (insert (format "%s: %s\r\n" (car header) (cdr header))))
       (insert "\r\n")
       (process-send-string proc (buffer-string)))))
