@@ -360,14 +360,14 @@ variable/value pairs, and the third is the fragment."
       (insert (format "HTTP/1.1 %d %s\r\n" status status-str))
       (dolist (header headers)
         (insert (format "%s: %s\r\n" (car header) (cdr header))))
-      (insert "\r\n")
-      (process-send-string proc (buffer-string)))))
+      (process-send-region proc (point-min) (point-max)))))
 
 (defun httpd-redirect (proc path)
   "Redirect the client to a new location (301)."
   (httpd-log (list 'redirect path))
   (httpd-send-header proc "text/plain" 301 (cons "Location" path))
-  (httpd-send-string proc ""))
+  (with-temp-buffer
+    (httpd-send-buffer proc (current-buffer))))
 
 (defun httpd-send-file (proc path &optional no-header)
   "Serve file to the given client."
@@ -403,15 +403,23 @@ variable/value pairs, and the third is the fragment."
           (httpd-send-buffer proc (current-buffer)))
       (httpd-redirect proc (concat uri-path "/")))))
 
-(defun httpd-send-string (proc string)
-  "Send STRING to the client and close the connection."
-  (process-send-string proc string)
-  (process-send-eof proc))
+(defun httpd--buffer-size (buffer)
+  "Get the buffer size in bytes."
+  (let ((orig enable-multibyte-characters)
+        (size 0))
+    (with-current-buffer buffer
+      (set-buffer-multibyte nil)
+      (setq size (buffer-size))
+      (if orig (set-buffer-multibyte orig)))
+    size))
 
 (defun httpd-send-buffer (proc buffer)
   "Send BUFFER to client and close the connection."
+  (let ((h (format "Content-Length: %d\r\n\r\n" (httpd--buffer-size buffer))))
+    (process-send-string proc h))
   (with-current-buffer buffer
-    (httpd-send-string proc (buffer-string))))
+    (process-send-region proc (point-min) (point-max))
+    (process-send-eof proc)))
 
 (defun httpd-error (proc status &optional info)
   "Send an error page appropriate for STATUS to the client,

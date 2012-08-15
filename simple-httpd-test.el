@@ -45,7 +45,8 @@
 (ert-deftest httpd-send-header-test ()
   "Test server header output."
   (let ((header ""))
-    (flet ((process-send-string (proc str) (setq header (concat header str))))
+    (flet ((process-send-region (p a b)
+             (setq header (concat header (buffer-string)))))
       (httpd-send-header nil "text/html" 404 (cons "Foo" "bar")))
     (let ((out (httpd-parse header)))
       (should (equal (cadar out) "404"))
