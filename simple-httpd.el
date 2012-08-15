@@ -4,7 +4,7 @@
 
 ;; Author: Christopher Wellons <mosquitopsu@gmail.com>
 ;; URL: https://github.com/skeeto/emacs-http-server
-;; Version: 1.1.1
+;; Version: 1.1.2
 
 ;;; Commentary:
 
@@ -360,6 +360,12 @@ variable/value pairs, and the third is the fragment."
       (insert "\r\n")
       (process-send-string proc (buffer-string)))))
 
+(defun httpd-redirect (proc path)
+  "Redirect the client to a new location (301)."
+  (httpd-log (list 'redirect path))
+  (httpd-send-header proc "text/plain" 301 (cons "Location" path))
+  (httpd-send-string proc ""))
+
 (defun httpd-send-file (proc path &optional no-header)
   "Serve file to the given client."
   (httpd-log `(file ,path))
@@ -392,10 +398,7 @@ variable/value pairs, and the third is the fragment."
                                 l tail f tail)))))
           (insert "</ul>\n<hr/>\n</body>\n</html>")
           (httpd-send-buffer proc (current-buffer)))
-      (let ((redirect (concat uri-path "/")))
-        (httpd-log (list 'redirect redirect))
-        (httpd-send-header proc "text/plain" 301 (cons "Location" redirect))
-        (httpd-send-string proc "")))))
+      (httpd-redirect proc (concat uri-path "/")))))
 
 (defun httpd-send-string (proc string)
   "Send STRING to the client and close the connection."
