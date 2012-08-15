@@ -27,7 +27,7 @@
   "Test HTTP header parsing."
   (let* ((h "GET /f%20b HTTP/1.1\r\nHost: localhost:8080\r\DNT: 1, 2\r\n\r\n")
          (p (httpd-parse h)))
-    (should (equal (cadr (assoc "GET" p)) "/f%20b"))
+    (should (equal (cadar p) "/f%20b"))
     (should (equal (cadr (assoc "Host" p)) "localhost:8080"))
     (should (equal (cadr (assoc "DNT" p)) "1, 2"))))
 
@@ -48,7 +48,7 @@
     (flet ((process-send-string (proc str) (setq header (concat header str))))
       (httpd-send-header nil "text/html" 404 (cons "Foo" "bar")))
     (let ((out (httpd-parse header)))
-      (should (equal (cadr (assoc "HTTP/1.0" out)) "404"))
+      (should (equal (cadar out) "404"))
       (should (equal (cadr (assoc "Content-Type" out)) "text/html"))
       (should (equal (cadr (assoc "Foo" out)) "bar")))))
 

@@ -207,7 +207,7 @@ otherwise do nothing."
 (defun httpd--filter (proc string)
   "Runs each time client makes a request."
   (let* ((request (httpd-parse string))
-         (uri (cadr (assoc "GET" request)))
+         (uri (cadar request))
          (parsed-uri (httpd-parse-uri uri))
          (uri-path (nth 0 parsed-uri))
          (uri-query (nth 1 parsed-uri))
@@ -279,7 +279,7 @@ A servlet that says hello,
       (push (list (car (split-string line ": "))
                   (mapconcat 'identity
                              (cdr (split-string line ": ")) ": ")) req))
-    (cdr req)))
+    (reverse (cdr req))))
 
 (defun httpd-parse-uri (uri)
   "Split a URI into it's components. In the return, the first
