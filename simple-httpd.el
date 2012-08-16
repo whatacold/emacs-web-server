@@ -233,10 +233,10 @@ otherwise do nothing."
                          (get ,uri-path)
                          ,(cons 'headers request)))
     (if (null servlet)
-        (httpd-error proc 404)
+        (httpd--error-safe proc 404)
       (condition-case error-case
           (funcall servlet proc uri-path uri-query request)
-        (error (httpd-error proc 500 error-case))))))
+        (error (httpd--error-safe proc 500 error-case))))))
 
 (defun httpd--log (server proc message)
   "Runs each time a new client connects."
@@ -461,6 +461,12 @@ optionally inserting object INFO into page."
           (erro (url-insert-entities-in-string (format "error: %s"  info))))
       (insert (format html (if info erro ""))))
     (httpd-send-buffer proc (current-buffer))))
+
+(defun httpd--error-safe (&rest args)
+  "Call httpd-error and report failures to *httpd*."
+  (condition-case error-case
+      (apply #'httpd-error args)
+    (error (httpd-log `(hard-error ,error-case)))))
 
 (provide 'simple-httpd)
 
