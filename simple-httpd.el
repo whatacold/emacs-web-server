@@ -14,8 +14,8 @@
 ;; change to take effect.
 
 ;; Everything is performed by servlets, including serving
-;; files. Servlets are enabled by setting `httpd-servlets' to
-;; true. Servlets are four-parameter functions that begin with
+;; files. Servlets are enabled by setting `httpd-servlets' to true
+;; (default). Servlets are four-parameter functions that begin with
 ;; "httpd/" where the trailing component specifies the initial path on
 ;; the server. For example, the function `httpd/hello-world' will be
 ;; called for the request "/hello-world" and "/hello-world/foo".
@@ -85,7 +85,7 @@
   :group 'simple-httpd
   :type 'boolean)
 
-(defcustom httpd-servlets nil
+(defcustom httpd-servlets t
   "Enable servlets."
   :group 'simple-httpd
   :type 'boolean)
