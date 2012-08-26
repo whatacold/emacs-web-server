@@ -145,7 +145,10 @@
 (defvar httpd-status-codes
   '((200 . "OK")
     (301 . "Moved Permanently")
+    (302 . "Found")
+    (303 . "See Other")
     (304 . "Not Modified")
+    (307 . "Temporary Redirect")
     (403 . "Forbidden")
     (404 . "Not Found")
     (500 . "Internal Server Error"))
@@ -393,10 +396,10 @@ variable/value pairs, and the third is the fragment."
         (insert (format "%s: %s\r\n" (car header) (cdr header))))
       (process-send-region proc (point-min) (point-max)))))
 
-(defun httpd-redirect (proc path)
-  "Redirect the client to a new location (301)."
+(defun httpd-redirect (proc path &optional code)
+  "Redirect the client to a new location (default 301)."
   (httpd-log (list 'redirect path))
-  (httpd-send-header proc "text/plain" 301 (cons "Location" path))
+  (httpd-send-header proc "text/plain" (or code 301) (cons "Location" path))
   (with-temp-buffer
     (httpd-send-buffer proc (current-buffer))))
 
