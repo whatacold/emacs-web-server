@@ -20,6 +20,18 @@ to `nil`.
 (httpd-start)
 ```
 
+## Servlets
+
+Servlets can be defined with `defservlet`. This one creates at servlet
+at `/hello-world` that says hello.
+
+```cl
+(defservlet hello-world text/plain (path)
+  (insert "hello, " (file-name-nondirectory path)))
+```
+
+See the comment header in `simple-httpd.el` for full details.
+
 ## Fork
 
 There's a fork out there but it's been GPLed. Like the rest of my
