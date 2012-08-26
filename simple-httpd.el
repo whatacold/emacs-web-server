@@ -25,8 +25,8 @@
 ;; `httpd-serve-files' to nil. It is used even when `httpd-servlets'
 ;; is nil.
 
-;; The four parameters for a servlet are process, URI path, URI
-;; parameters (alist), and the full request object (header
+;; The four parameters for a servlet are process, URI path, GET/POST
+;; arguments (alist), and the full request object (header
 ;; alist). These are ordered by general importance so that some can be
 ;; ignored. Two macros are provided to help with writing servlets.
 
@@ -54,6 +54,15 @@
 
 ;;     (defservlet scratch text/plain ()
 ;;       (insert-buffer-substring (get-buffer-create "*scratch*")))
+
+;; Some support functions are available for servlets (but *not* for
+;; use within a `defservlet' or `with-httpd-buffer').
+
+;;   * `httpd-send-file'   -- serve a file with proper caching
+;;   * `httpd-redirect'    -- redirect the browser to another url
+;;   * `httpd-send-header' -- send custom headers
+;;   * `httpd-error'       -- report an error to the client
+;;   * `httpd-log'         -- log an object to *httpd*
 
 ;;; Code:
 
