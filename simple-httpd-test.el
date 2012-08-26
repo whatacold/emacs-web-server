@@ -80,4 +80,14 @@
       (should (eq (httpd-get-servlet "/foo/bar/baz") 'httpd/foo/bar))
       (should (eq (httpd-get-servlet "/undefined")   'httpd/)))))
 
+(ert-deftest httpd-unhex-test ()
+  "Test URL decoding."
+  (should (equal (httpd-unhex "I+%2Bam%2B+foo.") "I +am+ foo."))
+  (should (equal (httpd-unhex "foo%0D%0Abar") "foo\r\nbar")))
+
+(ert-deftest httpd-parse-args-test ()
+  "Test argument parsing."
+  (should (equal (httpd-parse-args "na=foo&v=1") '(("na" "foo") ("v" "1"))))
+  (should (equal (httpd-parse-args "") ())))
+
 ;;; simple-httpd-test.el ends here

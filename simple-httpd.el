@@ -224,9 +224,10 @@ otherwise do nothing."
   "Runs each time client makes a request."
   (let* ((request (httpd-parse string))
          (uri (cadar request))
-         (parsed-uri (httpd-parse-uri uri))
+         (content (cadr (assoc "Content" request)))
+         (parsed-uri (httpd-parse-uri (concat uri)))
          (uri-path (nth 0 parsed-uri))
-         (uri-query (nth 1 parsed-uri))
+         (uri-query (append (nth 1 parsed-uri) (httpd-parse-args content)))
          (servlet (httpd-get-servlet uri-path)))
     (httpd-log `(request (date ,(httpd-date-string))
                          (address ,(car (process-contact proc)))
@@ -294,12 +295,25 @@ A servlet that says hello,
 (defun httpd-parse (string)
   "Parse client http header into alist."
   (let* ((lines (split-string string "[\n\r]+"))
-         (req (list (split-string (car lines)))))
-    (dolist (line (cdr lines))
+         (req (list (split-string (car lines))))
+         (post (cadr (split-string string "\r\n\r\n"))))
+    (dolist (line (butlast (cdr lines)))
       (push (list (car (split-string line ": "))
                   (mapconcat 'identity
                              (cdr (split-string line ": ")) ": ")) req))
-    (reverse (cdr req))))
+    (push (list "Content" post) req)
+    (reverse req)))
+
+(defun httpd-unhex (str)
+  "Fully decode the URL encoding in a string (including +'s)."
+  (url-unhex-string (replace-regexp-in-string (regexp-quote "+") " " str) t))
+
+(defun httpd-parse-args (argstr)
+  "Parse a string containing URL encoded arguments."
+  (unless (zerop (length argstr))
+    (mapcar (lambda (str)
+              (mapcar 'httpd-unhex (split-string str "=")))
+            (split-string argstr "&"))))
 
 (defun httpd-parse-uri (uri)
   "Split a URI into it's components. In the return, the first
@@ -308,14 +322,9 @@ variable/value pairs, and the third is the fragment."
   (let ((p1 (string-match (regexp-quote "?") uri))
         (p2 (string-match (regexp-quote "#") uri))
         retval)
-    (push (if p2 (url-unhex-string (substring uri (1+ p2))))
-          retval)
-    (push (if p1 (mapcar (lambda (str)
-                           (mapcar 'url-unhex-string (split-string str "=")))
-                         (split-string (substring uri (1+ p1) p2) "&")))
-          retval)
-    (push (url-unhex-string (substring uri 0 (or p1 p2)))
-          retval)))
+    (push (if p2 (httpd-unhex (substring uri (1+ p2)))) retval)
+    (push (if p1 (httpd-parse-args (substring uri (1+ p1) p2))) retval)
+    (push (httpd-unhex (substring uri 0 (or p1 p2))) retval)))
 
 ;; Path handling
 
