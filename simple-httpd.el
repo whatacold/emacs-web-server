@@ -224,7 +224,10 @@ otherwise do nothing."
 
 (defun httpd-date-string (&optional date)
   "Return an HTTP date string (RFC 1123)."
-  (format-time-string "%a, %e %b %Y %T %Z" (or date (current-time))))
+  (let* ((zone (car (current-time-zone)))
+         (float (if date (time-to-seconds date) (float-time)))
+         (now (seconds-to-time (- float zone))))
+    (format-time-string "%a, %e %b %Y %T GMT" now)))
 
 (defun httpd-etag (file)
   "Compute the ETag for the given file."
