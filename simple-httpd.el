@@ -128,6 +128,7 @@
     ("txt"  . "text/plain")
     ("el"   . "text/plain")
     ("js"   . "text/javascript")
+    ("md"   . "text/x-markdown")
     ("gz"   . "application/octet-stream")
     ("ps"   . "application/postscript")
     ("eps"  . "application/postscript")
