@@ -276,10 +276,12 @@ otherwise do nothing."
 serve it to an HTTP client with HTTP header indicating the
 specified MIME type."
   (declare (indent defun))
-  `(with-temp-buffer
-     ,@body
-     (httpd-send-header ,proc ,mime 200)
-     (httpd-send-buffer ,proc (current-buffer))))
+  (let ((proc-sym (make-symbol "--proc--")))
+    `(let ((,proc-sym ,proc))
+       (with-temp-buffer
+         ,@body
+         (httpd-send-header ,proc-sym ,mime 200)
+         (httpd-send-buffer ,proc-sym (current-buffer))))))
 
 (defmacro defservlet (name mime path-query-request &rest body)
   "Defines a simple httpd servelet. The servlet runs in a
