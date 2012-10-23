@@ -6,6 +6,8 @@ stripped down to simply serve files and directory listings. Client
 requests are sanitized so this *should* be safe, but I make no
 guarantees.
 
+This package is available on [MELPA](http://melpa.milkbox.net/).
+
 ## Usage
 
 Once loaded, there are only two interactive functions to worry about:
