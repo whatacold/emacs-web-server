@@ -207,6 +207,7 @@ per Emacs instance."
    :server   t
    :family   'ipv4
    :filter   'httpd--filter
+   :filter-multibyte nil
    :log      'httpd--log)
   (run-hooks 'httpd-start-hook))
 
@@ -238,22 +239,28 @@ otherwise do nothing."
 
 (defun httpd--filter (proc string)
   "Runs each time client makes a request."
+  (setq string (concat (process-get proc :previous-string) string))
   (let* ((request (httpd-parse string))
+         (content-length (cadr (assoc "Content-Length" request)))
          (uri (cadar request))
          (content (cadr (assoc "Content" request)))
          (parsed-uri (httpd-parse-uri (concat uri)))
          (uri-path (nth 0 parsed-uri))
          (uri-query (append (nth 1 parsed-uri) (httpd-parse-args content)))
          (servlet (httpd-get-servlet uri-path)))
-    (httpd-log `(request (date ,(httpd-date-string))
-                         (address ,(car (process-contact proc)))
-                         (get ,uri-path)
-                         ,(cons 'headers request)))
-    (if (null servlet)
-        (httpd--error-safe proc 404)
-      (condition-case error-case
-          (funcall servlet proc uri-path uri-query request)
-        (error (httpd--error-safe proc 500 error-case))))))
+    (if (and content-length
+             (< (length content) (string-to-number content-length)))
+        (process-put proc :previous-string string)
+      (process-put proc :previous-string nil)
+      (httpd-log `(request (date ,(httpd-date-string))
+                           (address ,(car (process-contact proc)))
+                           (get ,uri-path)
+                           ,(cons 'headers request)))
+      (if (null servlet)
+          (httpd--error-safe proc 404)
+        (condition-case error-case
+            (funcall servlet proc uri-path uri-query request)
+          (error (httpd--error-safe proc 500 error-case)))))))
 
 (defun httpd--log (server proc message)
   "Runs each time a new client connects."
