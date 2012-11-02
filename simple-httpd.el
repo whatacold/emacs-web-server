@@ -208,6 +208,7 @@ per Emacs instance."
    :family   'ipv4
    :filter   'httpd--filter
    :filter-multibyte nil
+   :coding   'utf-8-unix  ; *should* be ISO-8859-1 but that doesn't work
    :log      'httpd--log)
   (run-hooks 'httpd-start-hook))
 
