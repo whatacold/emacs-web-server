@@ -15,7 +15,9 @@
   (should (equal (httpd-clean-path "/") ""))
   (should (equal (httpd-clean-path "../") ""))
   (should (equal (httpd-clean-path "/../../foo/../..") "foo"))
-  (should (equal (httpd-clean-path "/tmp/../root/foo") "tmp/root/foo")))
+  (should (equal (httpd-clean-path "/tmp/../root/foo") "tmp/root/foo"))
+  (should (equal (httpd-clean-path "~") "./~"))
+  (should (equal (httpd-clean-path "/~/.gnupg") "./~/.gnupg")))
 
 (ert-deftest httpd-mime-test ()
   "Test MIME type fetching."

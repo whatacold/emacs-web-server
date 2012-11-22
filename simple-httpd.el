@@ -363,8 +363,11 @@ variable/value pairs, and the third is the fragment."
 
 (defun httpd-clean-path (path)
   "Clean dangerous .. from the path and remove the leading /."
-  (mapconcat 'identity
-             (delete "" (delete ".." (split-string path "/"))) "/"))
+  (let* ((split (delete ".." (split-string path "/")))
+         (unsplit (mapconcat 'identity (delete "" split) "/")))
+    (if (and (> (length unsplit) 0) (eql ?~ (aref unsplit 0)))
+        (concat "./" unsplit)
+      unsplit)))
 
 (defun httpd-gen-path (path)
   "Translate GET to secure path in httpd-root."
