@@ -228,9 +228,12 @@
     (httpd-send-buffer proc (current-buffer))))
 
 (defun httpd-clean-path (path)
-  "Clean dangerous .. from the path."
-  (mapconcat 'identity
-	     (delete ".." (split-string (url-unhex-string path) "\\/")) "/"))
+  "Clean dangerous .. and ~ from the path and remove the leading /."
+  (let* ((split (delete ".." (split-string path "/")))
+         (unsplit (mapconcat 'identity (delete "" split) "/")))
+    (if (and (> (length unsplit) 0) (eql ?~ (aref unsplit 0)))
+        (concat "./" unsplit)
+      unsplit)))
 
 (defun httpd-get-ext (path)
   "Get extention from path to determine MIME type."
