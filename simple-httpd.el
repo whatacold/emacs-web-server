@@ -289,6 +289,7 @@ otherwise do nothing."
         (goto-char (point-max))
         (pp item (current-buffer)))
       (if follow (goto-char (point-max))))
+    (setq truncate-lines t)
     (setq buffer-read-only t)
     (set-buffer-modified-p nil)))
 
