@@ -31,8 +31,9 @@
 ;; ignored. Two macros are provided to help with writing servlets.
 
 ;;  * `with-httpd-buffer' -- Creates a temporary buffer that is
-;;    automatically served to the client at the end of the body. For
-;;    example, this servlet says hello,
+;;    automatically served to the client at the end of the body.
+;;    Additionally, `standard-output' is set to this output
+;;    buffer. For example, this servlet says hello,
 
 ;;     (defun httpd/hello-world (proc path &rest args)
 ;;       (with-httpd-buffer proc "text/plain"
@@ -283,14 +284,16 @@ otherwise do nothing."
 ;; Servlets
 
 (defmacro with-httpd-buffer (proc mime &rest body)
-  "Create a temporary buffer and, after the body, automatically
-serve it to an HTTP client with HTTP header indicating the
-specified MIME type."
+  "Create a temporary buffer, set it as the current buffer, and,
+at the end of body, automatically serve it to an HTTP client with
+an HTTP header indicating the specified MIME type. Additionally,
+`standard-output' is set to this output buffer."
   (declare (indent defun))
   (let ((proc-sym (make-symbol "--proc--")))
     `(let ((,proc-sym ,proc))
        (with-temp-buffer
-         ,@body
+         (let ((standard-output (current-buffer)))
+           ,@body)
          (httpd-send-header ,proc-sym ,mime 200)
          (httpd-send-buffer ,proc-sym (current-buffer))))))
 
