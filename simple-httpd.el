@@ -4,7 +4,7 @@
 
 ;; Author: Christopher Wellons <mosquitopsu@gmail.com>
 ;; URL: https://github.com/skeeto/emacs-http-server
-;; Version: 1.3.0
+;; Version: 1.3.1
 
 ;;; Commentary:
 
@@ -64,6 +64,17 @@
 ;;   * `httpd-send-header' -- send custom headers
 ;;   * `httpd-error'       -- report an error to the client
 ;;   * `httpd-log'         -- log an object to *httpd*
+
+;;; History:
+
+;; Version 1.3.1: features and fixes
+;;   * Set `standard-output' in `with-httpd-buffer'
+;; Version 1.3.0: security fix
+;;   * Fix path expansion security issue
+;;   * Fix coding system (don't default)
+;; Version 1.2.4: fixes
+;;   * Handle large POSTs
+;;   * Fix date strings
 
 ;;; Code:
 
