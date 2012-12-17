@@ -330,6 +330,12 @@ A servlet that says hello,
        (with-httpd-buffer ,proc-sym ,(symbol-name mime)
          ,@body))))
 
+(font-lock-add-keywords 'emacs-lisp-mode
+  '(("(\\<\\(defservlet\\)\\> +\\([^ ()]+\\) +\\([^ ()]+\\)"
+     (1 'font-lock-keyword-face)
+     (2 'font-lock-function-name-face)
+     (3 'font-lock-type-face))))
+
 ;; Request parsing
 
 (defun httpd-parse (string)
