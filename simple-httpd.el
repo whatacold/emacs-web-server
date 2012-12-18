@@ -384,7 +384,8 @@ variable/value pairs, and the third is the fragment."
 
 (defun httpd-clean-path (path)
   "Clean dangerous .. from the path and remove the leading /."
-  (let* ((split (delete ".." (split-string path "/")))
+  (let* ((sep (if (member system-type '(windows-nt ms-dos)) "[/\\]" "/"))
+         (split (delete ".." (split-string path sep)))
          (unsplit (mapconcat 'identity (delete "" split) "/")))
     (concat "./" unsplit)))
 
