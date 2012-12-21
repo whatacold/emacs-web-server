@@ -261,7 +261,7 @@ otherwise do nothing."
          (uri-query (append (nth 1 parsed-uri) (httpd-parse-args content)))
          (servlet (httpd-get-servlet uri-path)))
     (if (and content-length
-             (< (length content) (string-to-number content-length)))
+             (< (string-bytes content) (string-to-number content-length)))
         (process-put proc :previous-string string)
       (process-put proc :previous-string nil)
       (httpd-log `(request (date ,(httpd-date-string))
