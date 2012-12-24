@@ -253,6 +253,13 @@ otherwise do nothing."
   (concat "\"" (substring (sha1 (prin1-to-string (file-attributes file))) -16)
           "\""))
 
+(defun httpd--stringify (designator)
+  "Turn a string designator into a string."
+  (let ((string (format "%s" designator)))
+    (if (keywordp designator)
+        (substring string 1)
+      string)))
+
 ;; Networking code
 
 (defun httpd--filter (proc string)
@@ -342,7 +349,7 @@ A servlet that says hello,
   (let ((proc-sym (make-symbol "proc"))
         (fname (intern (concat "httpd/" (symbol-name name)))))
     `(defun ,fname (,proc-sym ,@path-query-request &rest ,(gensym))
-       (with-httpd-buffer ,proc-sym ,(symbol-name mime)
+       (with-httpd-buffer ,proc-sym ,(httpd--stringify mime)
          ,@body))))
 
 (font-lock-add-keywords 'emacs-lisp-mode
@@ -458,7 +465,7 @@ Extra headers can be sent by supplying them like keywords, i.e.
         (headers `(("Server" . ,httpd-server-name)
                    ("Date" . ,(httpd-date-string))
                    ("Connection" . "keep-alive")
-                   ("Content-Type" . ,mime)
+                   ("Content-Type" . ,(httpd--stringify mime))
                    ("Content-Length" . ,(httpd--buffer-size)))))
     (if httpd--header-sent
         (httpd-log '(warning "Attempted to send headers twice!"))
