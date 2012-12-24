@@ -4,7 +4,7 @@
 
 ;; Author: Christopher Wellons <mosquitopsu@gmail.com>
 ;; URL: https://github.com/skeeto/emacs-http-server
-;; Version: 1.3.1
+;; Version: 1.4.0
 
 ;;; Commentary:
 
@@ -67,6 +67,12 @@
 
 ;;; History:
 
+;; Version 1.4.0: features, API change, and fixes
+;;   * Removed httpd-send-buffer; httpd-send-header now does this implicitly
+;;   * httpd-send-header now accepts keywords instead
+;;   * Fix httpd-clean-path in Windows
+;;   * Fix a content-length bug
+;;   * defservlet fontification
 ;; Version 1.3.1: features and fixes
 ;;   * Set `standard-output' in `with-httpd-buffer'
 ;; Version 1.3.0: security fix
