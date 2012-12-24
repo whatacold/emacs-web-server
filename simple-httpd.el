@@ -4,7 +4,7 @@
 
 ;; Author: Christopher Wellons <mosquitopsu@gmail.com>
 ;; URL: https://github.com/skeeto/emacs-http-server
-;; Version: 1.4.0
+;; Version: 1.4.1
 
 ;;; Commentary:
 
@@ -74,6 +74,9 @@
 
 ;;; History:
 
+;; Version 1.4.1: small bug fixes, one feature
+;;   * All mime-type parameters now accept string designators
+;;   * Documentation update
 ;; Version 1.4.0: features, API change, and fixes
 ;;   * Removed httpd-send-buffer; httpd-send-header now does this implicitly
 ;;   * httpd-send-header now accepts keywords instead
