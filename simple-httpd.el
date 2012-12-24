@@ -48,6 +48,9 @@
 ;;     (defservlet hello-world text/plain (path)
 ;;       (insert "hello, " (file-name-nondirectory path)))
 
+;; Note that `defservlet' automatically sets `httpd-current-proc'. See
+;; below.
+
 ;; The "function parameters" part can be left empty or contain up to
 ;; three parameters corresponding to the final three servlet
 ;; parameters. For example, a servlet that shows *scratch* and doesn't
@@ -64,6 +67,10 @@
 ;;   * `httpd-send-header' -- send custom headers
 ;;   * `httpd-error'       -- report an error to the client
 ;;   * `httpd-log'         -- log an object to *httpd*
+
+;; Some of these functions require a process object, which isn't
+;; passed to `defservlet' servlets. Use t in place of the process
+;; argument to use `httpd-current-proc' (like `standard-output').
 
 ;;; History:
 
