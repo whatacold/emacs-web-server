@@ -462,8 +462,8 @@ Extra headers can be sent by supplying them like keywords, i.e.
                    ("Content-Length" . ,(buffer-size)))))
     (if httpd--header-sent
         (httpd-log '(warning "Attempted to send headers twice!"))
+      (setf httpd--header-sent t)
       (with-temp-buffer
-        (setf httpd--header-sent t)
         (insert (format "HTTP/1.1 %d %s\r\n" status status-str))
         (loop for (header value) on header-keys by #'cddr
               for header-name = (substring (symbol-name header) 1)
