@@ -440,21 +440,30 @@ variable/value pairs, and the third is the fragment."
   "Buffer-local variable indicating if the header has been sent.")
 (make-variable-buffer-local 'httpd--header-sent)
 
-(defun httpd-send-header (proc mime status &rest extra-headers)
+(defun httpd-send-header (proc mime status &rest header-keys)
   "Send an HTTP header with given MIME type and STATUS, followed
 by the current buffer. If PROC is T use the `httpd-current-proc'
-as the process."
+as the process.
+
+Extra headers can be sent by supplying them like keywords, i.e.
+
+ (httpd-send-header t \"text/plain\" 200 :X-Powered-By \"simple-httpd\")"
   (let ((status-str (cdr (assq status httpd-status-codes)))
-        (headers (nconc `(("Server" . ,httpd-server-name)
-                          ("Date" . ,(httpd-date-string))
-                          ("Connection" . "keep-alive")
-                          ("Content-Type" . ,mime)
-                          ("Content-Length" . ,(buffer-size)))
-                        extra-headers)))
+        (headers `(("Server" . ,httpd-server-name)
+                   ("Date" . ,(httpd-date-string))
+                   ("Connection" . "keep-alive")
+                   ("Content-Type" . ,mime)
+                   ("Content-Length" . ,(buffer-size)))))
     (if httpd--header-sent
         (httpd-log '(warning "Attempted to send headers twice!"))
       (with-temp-buffer
+        (setf httpd--header-sent t)
         (insert (format "HTTP/1.1 %d %s\r\n" status status-str))
+        (loop for (header value) on header-keys by #'cddr
+              for header-name = (substring (symbol-name header) 1)
+              for value-name = (format "%s" value)
+              collect (cons header-name value-name) into extras
+              finally (setf headers (nconc headers extras)))
         (dolist (header headers)
           (insert (format "%s: %s\r\n" (car header) (cdr header))))
         (insert "\r\n")
@@ -468,7 +477,7 @@ as the process."
 the `httpd-current-proc' as the process."
   (httpd-log (list 'redirect path))
   (with-temp-buffer
-    (httpd-send-header proc "text/plain" (or code 301) (cons "Location" path))))
+    (httpd-send-header proc "text/plain" (or code 301) :Location path)))
 
 (defun httpd-send-file (proc path &optional req)
   "Serve file to the given client.  If PROC is T use the
@@ -484,9 +493,8 @@ the `httpd-current-proc' as the process."
       (with-temp-buffer
         (set-buffer-multibyte nil)
         (insert-file-contents path)
-        (httpd-send-header
-         proc (httpd-get-mime (file-name-extension path)) 200
-         (cons "Last-Modified" mtime) (cons "ETag" etag))))))
+        (httpd-send-header proc (httpd-get-mime (file-name-extension path))
+                           200 :Last-Modified mtime :ETag etag)))))
 
 (defun httpd-send-directory (proc path uri-path)
   "Serve a file listing to the client. If PROC is T use the
