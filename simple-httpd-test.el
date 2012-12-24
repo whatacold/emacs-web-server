@@ -49,7 +49,7 @@
   (let ((header ""))
     (flet ((process-send-region (p a b)
              (setq header (concat header (buffer-string)))))
-      (httpd-send-header nil "text/html" 404 (cons "Foo" "bar")))
+      (httpd-send-header nil "text/html" 404 :Foo "bar"))
     (let ((out (httpd-parse header)))
       (should (equal (cadar out) "404"))
       (should (equal (cadr (assoc "Content-Type" out)) "text/html"))
