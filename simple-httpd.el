@@ -459,7 +459,7 @@ Extra headers can be sent by supplying them like keywords, i.e.
                    ("Date" . ,(httpd-date-string))
                    ("Connection" . "keep-alive")
                    ("Content-Type" . ,mime)
-                   ("Content-Length" . ,(buffer-size)))))
+                   ("Content-Length" . ,(httpd--buffer-size)))))
     (if httpd--header-sent
         (httpd-log '(warning "Attempted to send headers twice!"))
       (setf httpd--header-sent t)
