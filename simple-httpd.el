@@ -107,7 +107,7 @@
   :group 'simple-httpd
   :type 'symbol)
 
-(defcustom httpd-host 'local
+(defcustom httpd-host nil
   "Web server host name used by `make-network-process'"
   :group 'simple-httpd
   :type 'symbol)
