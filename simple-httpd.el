@@ -9,9 +9,9 @@
 ;;; Commentary:
 
 ;; Use `httpd-start' to start the web server. Files are served from
-;; `httpd-root' on port `httpd-port'. While the root can be changed at
-;; any time, the server needs to be restarted in order for a port
-;; change to take effect.
+;; `httpd-root' on port `httpd-port' using `httpd-ip-family' at host
+;; `httpd-host'. While the root can be changed at any time, the server
+;; needs to be restarted in order for a port change to take effect.
 
 ;; Everything is performed by servlets, including serving
 ;; files. Servlets are enabled by setting `httpd-servlets' to true
@@ -101,6 +101,16 @@
 (defgroup simple-httpd nil
   "A simple web server."
   :group 'comm)
+
+(defcustom httpd-ip-family 'ipv4
+  "Web server IP family used by `make-network-process'"
+  :group 'simple-httpd
+  :type 'symbol)
+
+(defcustom httpd-host 'local
+  "Web server host name used by `make-network-process'"
+  :group 'simple-httpd
+  :type 'symbol)
 
 (defcustom httpd-port 8080
   "Web server port."
@@ -233,7 +243,8 @@ per Emacs instance."
    :name     "httpd"
    :service  httpd-port
    :server   t
-   :family   'ipv4
+   :host     httpd-host
+   :family   httpd-ip-family
    :filter   'httpd--filter
    :filter-multibyte nil
    :coding   'utf-8-unix  ; *should* be ISO-8859-1 but that doesn't work
