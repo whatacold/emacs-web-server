@@ -93,4 +93,9 @@
   (should (equal (httpd-parse-args "na=foo&v=1") '(("na" "foo") ("v" "1"))))
   (should (equal (httpd-parse-args "") ())))
 
+(ert-deftest httpd-parse-endpoint ()
+  "Test endpoint parsing for defservlet*."
+  (should (equal (httpd-parse-endpoint 'example/foos/:n/:d)
+                 '(example/foos ((n . 2) (d . 3))))))
+
 ;;; simple-httpd-test.el ends here

@@ -59,6 +59,22 @@
 ;;     (defservlet scratch text/plain ()
 ;;       (insert-buffer-substring (get-buffer-create "*scratch*")))
 
+;; A higher level macro `defservlet*' wraps this lower-level
+;; `defservlet' macro, automatically binding variables to components
+;; of the request. For example, this binds parts of the request path
+;; and one query parameter. Request components not provided by the
+;; client are bound to nil.
+
+;;     (defservlet* packages/:package/:version text/plain (verbose)
+;;       (insert (format "%s\n%s\n" package version))
+;;       (princ (get-description package version))
+;;       (when verbose
+;;         (insert (format "%S" (get-dependencies package version)))))
+
+;; It would be accessed like so,
+
+;;     http://example.com/packages/foobar/1.0?verbose=1
+
 ;; Some support functions are available for servlets for more
 ;; customized responses.
 
@@ -373,8 +389,49 @@ A servlet that says hello,
        (with-httpd-buffer ,proc-sym ,(httpd--stringify mime)
          ,@body))))
 
+(defun httpd-parse-endpoint (symbol)
+  "Parse an endpoint definition template for use with `defservlet*'."
+  (loop for item in (split-string (symbol-name symbol) "/")
+        for n upfrom 0
+        when (eql (aref item 0) ?:)
+        collect (cons (intern (substring item 1)) n) into vars
+        else collect item into path
+        finally (return
+                 (values (intern (mapconcat #'identity path "/")) vars))))
+
+(defmacro defservlet* (endpoint mime args &rest body)
+  "Like `defservlet', but automatically bind variables/arguments
+to the request. Trailing components of the ENDPOINT can be bound
+by prefixing these components with a colon, acting like a template.
+
+    (defservlet* packages/:package/:version text/plain (verbose)
+      (insert (format \"%s\\n%s\\n\" package version))
+      (princ (get-description package version))
+      (when verbose
+        (insert (format \"%S\" (get-dependencies package version)))))
+
+When accessed from this URL,
+
+    http://example.com/packages/foobar/1.0?verbose=1
+
+The variables package, version, and verbose will be bound to the
+associated components of the URL. Components not provided are
+bound to nil. The original query can be accessed by the anaphoric
+lexical variables httpd-path, httpd-query, and httpd-request."
+  (declare (indent defun))
+  (multiple-value-bind (path vars) (httpd-parse-endpoint endpoint)
+    `(defservlet ,path ,mime (httpd-path httpd-query httpd-request)
+       (let ((httpd-split-path (split-string (substring httpd-path 1) "/")))
+         (let ,(loop for (var . pos) in vars
+                     for extract = `(httpd-unhex (nth ,pos httpd-split-path))
+                     collect (list var extract))
+           (let ,(loop for arg in args
+                       for arg-name = (symbol-name arg)
+                       collect (list arg `(cadr (assoc ,arg-name httpd-query))))
+             ,@body))))))
+
 (font-lock-add-keywords 'emacs-lisp-mode
-  '(("(\\<\\(defservlet\\)\\> +\\([^ ()]+\\) +\\([^ ()]+\\)"
+  '(("(\\<\\(defservlet\\*?\\)\\> +\\([^ ()]+\\) +\\([^ ()]+\\)"
      (1 'font-lock-keyword-face)
      (2 'font-lock-function-name-face)
      (3 'font-lock-type-face))))
