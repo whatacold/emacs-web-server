@@ -395,7 +395,8 @@ A servlet that says hello,
 
 (defun httpd-unhex (str)
   "Fully decode the URL encoding in a string (including +'s)."
-  (url-unhex-string (replace-regexp-in-string (regexp-quote "+") " " str) t))
+  (when str
+    (url-unhex-string (replace-regexp-in-string (regexp-quote "+") " " str) t)))
 
 (defun httpd-parse-args (argstr)
   "Parse a string containing URL encoded arguments."
