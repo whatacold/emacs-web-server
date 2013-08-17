@@ -179,6 +179,8 @@
     ("htm"  . "text/html")
     ("html" . "text/html")
     ("xml"  . "text/xml")
+    ("rss"  . "text/xml")
+    ("atom" . "text/xml")
     ("txt"  . "text/plain")
     ("el"   . "text/plain")
     ("js"   . "text/javascript")
@@ -203,7 +205,8 @@
 
 (defvar httpd-indexes
   '("index.html"
-    "index.htm")
+    "index.htm"
+    "index.xml")
   "File served by default when accessing a directory.")
 
 (defvar httpd-status-codes
