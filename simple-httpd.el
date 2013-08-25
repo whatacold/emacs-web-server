@@ -121,12 +121,12 @@
   :group 'comm)
 
 (defcustom httpd-ip-family 'ipv4
-  "Web server IP family used by `make-network-process'"
+  "Web server IP family used by `make-network-process'."
   :group 'simple-httpd
   :type 'symbol)
 
 (defcustom httpd-host nil
-  "Web server host name used by `make-network-process'"
+  "Web server host name used by `make-network-process'."
   :group 'simple-httpd
   :type 'symbol)
 
@@ -141,7 +141,7 @@
   :type 'directory)
 
 (defcustom httpd-serve-files t
-  "Enable serving files from httpd-root."
+  "Enable serving files from `httpd-root'."
   :group 'simple-httpd
   :type 'boolean)
 
@@ -203,7 +203,7 @@
     ("mp4"  . "video/mp4")
     ("mkv"  . "video/x-matroska")
     ("webm" . "video/webm"))
-  "MIME types for headers")
+  "MIME types for headers.")
 
 (defvar httpd-indexes
   '("index.html"
@@ -221,7 +221,7 @@
     (403 . "Forbidden")
     (404 . "Not Found")
     (500 . "Internal Server Error"))
-  "HTTP status codes")
+  "HTTP status codes.")
 
 (defvar httpd-html
   '((403 . "<!DOCTYPE html>
@@ -254,9 +254,9 @@
 
 ;;;###autoload
 (defun httpd-start ()
-  "Start the emacs web server. If the server is already running,
-this will restart the server. There is only one server instance
-per Emacs instance."
+  "Start the web server process. If the server is already
+running, this will restart the server. There is only one server
+instance per Emacs instance."
   (interactive)
   (httpd-stop)
   (httpd-log `(start ,(current-time-string)))
@@ -274,8 +274,7 @@ per Emacs instance."
 
 ;;;###autoload
 (defun httpd-stop ()
-  "Stop the emacs web server if it is currently running,
-otherwise do nothing."
+  "Stop the web server if it is currently running, otherwise do nothing."
   (interactive)
   (when (process-status "httpd")
     (delete-process "httpd")
@@ -291,7 +290,7 @@ otherwise do nothing."
     (format-time-string "%a, %e %b %Y %T GMT" now)))
 
 (defun httpd-etag (file)
-  "Compute the ETag for the given file."
+  "Compute the ETag for FILE."
   (concat "\"" (substring (sha1 (prin1-to-string (file-attributes file))) -16)
           "\""))
 
@@ -456,7 +455,7 @@ lexical variables httpd-path, httpd-query, and httpd-request."
     (reverse req)))
 
 (defun httpd-unhex (str)
-  "Fully decode the URL encoding in a string (including +'s)."
+  "Fully decode the URL encoding in STR (including +'s)."
   (when str
     (url-unhex-string (replace-regexp-in-string (regexp-quote "+") " " str) t)))
 
@@ -481,7 +480,7 @@ variable/value pairs, and the third is the fragment."
 ;; Path handling
 
 (defun httpd-status (path)
-  "Determine status code for the path."
+  "Determine status code for PATH."
   (cond
    ((not (file-exists-p path))   404)
    ((not (file-readable-p path)) 403)
@@ -489,7 +488,7 @@ variable/value pairs, and the third is the fragment."
    (200)))
 
 (defun httpd-clean-path (path)
-  "Clean dangerous .. from the path and remove the leading /."
+  "Clean dangerous .. from PATH and remove the leading slash."
   (let* ((sep (if (member system-type '(windows-nt ms-dos)) "[/\\]" "/"))
          (split (delete ".." (split-string path sep)))
          (unsplit (mapconcat 'identity (delete "" split) "/")))
