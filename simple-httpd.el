@@ -285,9 +285,7 @@ instance per Emacs instance."
 
 (defun httpd-date-string (&optional date)
   "Return an HTTP date string (RFC 1123)."
-  (let* ((zone (car (current-time-zone)))
-         (now (seconds-to-time (- (float-time date) zone))))
-    (format-time-string "%a, %e %b %Y %T GMT" now)))
+  (format-time-string "%a, %e %b %Y %T GMT" date t))
 
 (defun httpd-etag (file)
   "Compute the ETag for FILE."
