@@ -4,7 +4,7 @@
 
 ;; Author: Christopher Wellons <mosquitopsu@gmail.com>
 ;; URL: https://github.com/skeeto/emacs-http-server
-;; Version: 1.4.1
+;; Version: 1.4.2
 
 ;;; Commentary:
 
@@ -90,6 +90,8 @@
 
 ;;; History:
 
+;; Version 1.4.2: features, fixes
+;;   * `defservlet*' macro
 ;; Version 1.4.1: small bug fixes, one feature
 ;;   * All mime-type parameters now accept string designators
 ;;   * Documentation update
