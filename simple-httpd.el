@@ -368,6 +368,7 @@ an HTTP header indicating the specified MIME type. Additionally,
   (let ((proc-sym (make-symbol "--proc--")))
     `(let ((,proc-sym ,proc))
        (with-temp-buffer
+         (setf major-mode 'httpd-buffer)
          (let ((standard-output (current-buffer))
                (httpd-current-proc ,proc-sym))
            ,@body)
@@ -573,8 +574,7 @@ Extra headers can be sent by supplying them like keywords, i.e.
                    ("Connection" . "keep-alive")
                    ("Content-Type" . ,(httpd--stringify mime))
                    ("Content-Length" . ,(httpd--buffer-size)))))
-    (if httpd--header-sent
-        (httpd-log '(warning "Attempted to send headers twice!"))
+    (unless httpd--header-sent
       (setf httpd--header-sent t)
       (with-temp-buffer
         (insert (format "HTTP/1.1 %d %s\r\n" status status-str))
@@ -595,12 +595,14 @@ Extra headers can be sent by supplying them like keywords, i.e.
   "Redirect the client to PATH (default 301). If PROC is T use
 the `httpd-current-proc' as the process."
   (httpd-log (list 'redirect path))
+  (when (eq major-mode 'httpd-buffer) (setf httpd--header-sent t))
   (with-temp-buffer
     (httpd-send-header proc "text/plain" (or code 301) :Location path)))
 
 (defun httpd-send-file (proc path &optional req)
   "Serve file to the given client.  If PROC is T use the
 `httpd-current-proc' as the process."
+  (when (eq major-mode 'httpd-buffer) (setf httpd--header-sent t))
   (let ((req-etag (cadr (assoc "If-None-Match" req)))
         (etag (httpd-etag path))
         (mtime (httpd-date-string (nth 4 (file-attributes path)))))
@@ -618,6 +620,7 @@ the `httpd-current-proc' as the process."
 (defun httpd-send-directory (proc path uri-path)
   "Serve a file listing to the client. If PROC is T use the
 `httpd-current-proc' as the process."
+  (when (eq major-mode 'httpd-buffer) (setf httpd--header-sent t))
   (let ((title (concat "Directory listing for "
                        (url-insert-entities-in-string uri-path))))
     (if (equal "/" (substring uri-path -1))
@@ -653,9 +656,10 @@ the `httpd-current-proc' as the process."
   "Send an error page appropriate for STATUS to the client,
 optionally inserting object INFO into page. If PROC is T use the
 `httpd-current-proc' as the process."
+  (when (eq major-mode 'httpd-buffer) (setf httpd--header-sent t))
   (httpd-log `(error ,status ,info))
   (with-temp-buffer
-    (let ((html (cdr (assq status httpd-html)))
+    (let ((html (or (cdr (assq status httpd-html)) ""))
           (erro (url-insert-entities-in-string (format "error: %s"  info))))
       (insert (format html (if info erro ""))))
     (httpd-send-header proc "text/html" status)))
