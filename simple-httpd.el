@@ -88,6 +88,10 @@
 ;; passed to `defservlet' servlets. Use t in place of the process
 ;; argument to use `httpd-current-proc' (like `standard-output').
 
+;; If you just need to serve static from some location under some
+;; route on the server, use `httpd-def-file-servlet'. It expands into
+;; a `defservlet' that serves files.
+
 ;;; History:
 
 ;; Version 1.4.2: features, fixes
@@ -438,6 +442,23 @@ lexical variables httpd-path, httpd-query, and httpd-request."
      (2 'font-lock-function-name-face)
      (3 'font-lock-type-face))))
 
+(defmacro httpd-def-file-servlet (name root)
+  "Defines a servlet that serves files from ROOT under the route NAME.
+
+    (httpd-def-file-servlet my/www \"/var/www/\")
+
+Automatically handles redirects and uses `httpd-serve-root' to
+actually serve up files."
+  (let* ((short-root (directory-file-name (symbol-name name)))
+         (path-root (concat short-root "/"))
+         (chop (length path-root)))
+    `(defservlet ,name nil (uri-path query request)
+       (setf httpd--header-sent t) ; Don't actually use this temp buffer
+       (if (= (length uri-path) ,chop)
+           (httpd-redirect t ,path-root)
+         (let ((path (substring uri-path ,chop)))
+           (httpd-serve-root t ,root path request))))))
+
 ;; Request parsing
 
 (defun httpd-parse (string)
@@ -492,9 +513,9 @@ variable/value pairs, and the third is the fragment."
          (unsplit (mapconcat 'identity (delete "" split) "/")))
     (concat "./" unsplit)))
 
-(defun httpd-gen-path (path)
-  "Translate GET to secure path in httpd-root."
-  (let ((clean (expand-file-name (httpd-clean-path path) httpd-root)))
+(defun httpd-gen-path (path &optional root)
+  "Translate GET to secure path in ROOT (`httpd-root')."
+  (let ((clean (expand-file-name (httpd-clean-path path) (or root httpd-root))))
     (if (file-directory-p clean)
         (let* ((dir (file-name-as-directory clean))
                (indexes (mapcar* (apply-partially 'concat dir) httpd-indexes))
@@ -512,15 +533,19 @@ variable/value pairs, and the third is the fragment."
          (find-if 'fboundp (mapcar 'intern-soft (maplist 'cat (reverse parts))))
          'httpd/)))))
 
+(defun httpd-serve-root (proc root uri-path &optional request)
+  "Securely serve a file from ROOT from under PATH."
+  (let* ((path (httpd-gen-path uri-path root))
+         (status (httpd-status path)))
+    (cond
+     ((not (= status 200))    (httpd-error          proc status))
+     ((file-directory-p path) (httpd-send-directory proc path uri-path))
+     (t                       (httpd-send-file      proc path request)))))
+
 (defun httpd/ (proc uri-path query request)
   "Default root servlet which serves files when httpd-serve-files is T."
   (if httpd-serve-files
-      (let* ((path (httpd-gen-path uri-path))
-             (status (httpd-status path)))
-        (cond
-         ((not (= status 200))    (httpd-error          proc status))
-         ((file-directory-p path) (httpd-send-directory proc path uri-path))
-         (t                       (httpd-send-file      proc path request))))
+      (httpd-serve-root proc httpd-root uri-path request)
     (httpd-error proc 403)))
 
 (defun httpd-get-mime (ext)
