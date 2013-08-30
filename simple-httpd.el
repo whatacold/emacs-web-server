@@ -544,7 +544,7 @@ variable/value pairs, and the third is the fragment."
 
 (defun httpd/ (proc uri-path query request)
   "Default root servlet which serves files when httpd-serve-files is T."
-  (if httpd-serve-files
+  (if (and httpd-serve-files httpd-root)
       (httpd-serve-root proc httpd-root uri-path request)
     (httpd-error proc 403)))
 
