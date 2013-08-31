@@ -375,6 +375,12 @@ an HTTP header indicating the specified MIME type. Additionally,
          (unless httpd--header-sent
            (httpd-send-header ,proc-sym ,mime 200))))))
 
+(defun httpd-discard-buffer ()
+  "Don't respond using current server buffer (`with-httpd-buffer').
+Returns a process for future response."
+  (when (eq major-mode 'httpd-buffer) (setf httpd--header-sent t))
+  httpd-current-proc)
+
 (defmacro defservlet (name mime path-query-request &rest body)
   "Defines a simple httpd servelet. The servlet runs in a
 temporary buffer which is automatically served to the client
@@ -595,14 +601,14 @@ Extra headers can be sent by supplying them like keywords, i.e.
   "Redirect the client to PATH (default 301). If PROC is T use
 the `httpd-current-proc' as the process."
   (httpd-log (list 'redirect path))
-  (when (eq major-mode 'httpd-buffer) (setf httpd--header-sent t))
+  (httpd-discard-buffer)
   (with-temp-buffer
     (httpd-send-header proc "text/plain" (or code 301) :Location path)))
 
 (defun httpd-send-file (proc path &optional req)
   "Serve file to the given client.  If PROC is T use the
 `httpd-current-proc' as the process."
-  (when (eq major-mode 'httpd-buffer) (setf httpd--header-sent t))
+  (httpd-discard-buffer)
   (let ((req-etag (cadr (assoc "If-None-Match" req)))
         (etag (httpd-etag path))
         (mtime (httpd-date-string (nth 4 (file-attributes path)))))
@@ -620,7 +626,7 @@ the `httpd-current-proc' as the process."
 (defun httpd-send-directory (proc path uri-path)
   "Serve a file listing to the client. If PROC is T use the
 `httpd-current-proc' as the process."
-  (when (eq major-mode 'httpd-buffer) (setf httpd--header-sent t))
+  (httpd-discard-buffer)
   (let ((title (concat "Directory listing for "
                        (url-insert-entities-in-string uri-path))))
     (if (equal "/" (substring uri-path -1))
@@ -656,7 +662,7 @@ the `httpd-current-proc' as the process."
   "Send an error page appropriate for STATUS to the client,
 optionally inserting object INFO into page. If PROC is T use the
 `httpd-current-proc' as the process."
-  (when (eq major-mode 'httpd-buffer) (setf httpd--header-sent t))
+  (httpd-discard-buffer)
   (httpd-log `(error ,status ,info))
   (with-temp-buffer
     (let ((html (or (cdr (assq status httpd-html)) ""))
