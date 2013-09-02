@@ -4,7 +4,7 @@
 
 ;; Author: Christopher Wellons <mosquitopsu@gmail.com>
 ;; URL: https://github.com/skeeto/emacs-http-server
-;; Version: 1.4.2
+;; Version: 1.4.3
 
 ;;; Commentary:
 
@@ -94,6 +94,10 @@
 
 ;;; History:
 
+;; Version 1.4.3: features
+;;   * Add `httpd-discard-buffer'
+;;   * Add `httpd-def-file-servlet'
+;;   * Be more careful about not sending extra headers
 ;; Version 1.4.2: features, fixes
 ;;   * `defservlet*' macro
 ;; Version 1.4.1: small bug fixes, one feature
