@@ -416,6 +416,18 @@ A servlet that says hello,
         finally (return
                  (values (intern (mapconcat #'identity path "/")) vars))))
 
+(defvar httpd-path nil
+  "Anaphoric variable for `defservlet*'.")
+
+(defvar httpd-query nil
+  "Anaphoric variable for `defservlet*'.")
+
+(defvar httpd-request nil
+  "Anaphoric variable for `defservlet*'.")
+
+(defvar httpd-split-path nil
+  "Anaphoric variable for `defservlet*'.")
+
 (defmacro defservlet* (endpoint mime args &rest body)
   "Like `defservlet', but automatically bind variables/arguments
 to the request. Trailing components of the ENDPOINT can be bound
@@ -434,18 +446,27 @@ When accessed from this URL,
 The variables package, version, and verbose will be bound to the
 associated components of the URL. Components not provided are
 bound to nil. The original query can be accessed by the anaphoric
-lexical variables httpd-path, httpd-query, and httpd-request."
+lexical variables `httpd-path', `httpd-query', and `httpd-request'."
   (declare (indent defun))
-  (multiple-value-bind (path vars) (httpd-parse-endpoint endpoint)
-    `(defservlet ,path ,mime (httpd-path httpd-query httpd-request)
-       (let ((httpd-split-path (split-string (substring httpd-path 1) "/")))
-         (let ,(loop for (var . pos) in vars
-                     for extract = `(httpd-unhex (nth ,pos httpd-split-path))
-                     collect (list var extract))
-           (let ,(loop for arg in args
-                       for arg-name = (symbol-name arg)
-                       collect (list arg `(cadr (assoc ,arg-name httpd-query))))
-             ,@body))))))
+  (let ((path-lexical (gensym))
+        (query-lexical (gensym))
+        (request-lexical (gensym)))
+    (multiple-value-bind (path vars) (httpd-parse-endpoint endpoint)
+      `(defservlet ,path ,mime (,path-lexical ,query-lexical ,request-lexical)
+         (let ((httpd-path ,path-lexical)
+               (httpd-query ,query-lexical)
+               (httpd-request ,request-lexical)
+               (httpd-split-path (split-string
+                                  (substring ,path-lexical 1) "/")))
+           (let ,(loop for (var . pos) in vars
+                       for extract =
+                       `(httpd-unhex (nth ,pos httpd-split-path))
+                       collect (list var extract))
+             (let ,(loop for arg in args
+                         for arg-name = (symbol-name arg)
+                         collect
+                         (list arg `(cadr (assoc ,arg-name httpd-query))))
+               ,@body)))))))
 
 (font-lock-add-keywords 'emacs-lisp-mode
   '(("(\\<\\(defservlet\\*?\\)\\> +\\([^ ()]+\\) +\\([^ ()]+\\)"
