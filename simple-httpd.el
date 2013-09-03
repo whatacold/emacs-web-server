@@ -443,10 +443,17 @@ When accessed from this URL,
 
     http://example.com/packages/foobar/1.0?verbose=1
 
-The variables package, version, and verbose will be bound to the
+the variables package, version, and verbose will be bound to the
 associated components of the URL. Components not provided are
-bound to nil. The original query can be accessed by the anaphoric
-lexical variables `httpd-path', `httpd-query', and `httpd-request'."
+bound to nil. The query arguments can use the Common Lisp &key
+form (variable default provided-p).
+
+    (defservlet* greeting/:name text/plain ((greeting \"hi\" greeting-p))
+      (princ (format \"%s, %s (provided: %s)\" greeting name greeting-p)))
+
+The original path, query, and request can be accessed by the
+anaphoric special variables `httpd-path', `httpd-query', and
+`httpd-request'."
   (declare (indent defun))
   (let ((path-lexical (gensym))
         (query-lexical (gensym))
@@ -463,9 +470,20 @@ lexical variables `httpd-path', `httpd-query', and `httpd-request'."
                        `(httpd-unhex (nth ,pos httpd-split-path))
                        collect (list var extract))
              (let ,(loop for arg in args
-                         for arg-name = (symbol-name arg)
-                         collect
-                         (list arg `(cadr (assoc ,arg-name httpd-query))))
+                         for has-default = (listp arg)
+                         for has-default-p = (and has-default
+                                                  (= 3 (length arg)))
+                         for arg-name = (symbol-name
+                                         (if has-default (first arg) arg))
+                         when has-default collect
+                         (list (first arg)
+                               `(let ((value (assoc ,arg-name httpd-query)))
+                                  (if value (second value) ,(second arg))))
+                         else collect
+                         (list arg `(second (assoc ,arg-name httpd-query)))
+                         when has-default-p collect
+                         (list (third arg)
+                               `(not (null (assoc ,arg-name httpd-query)))))
                ,@body)))))))
 
 (font-lock-add-keywords 'emacs-lisp-mode
