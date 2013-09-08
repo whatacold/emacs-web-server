@@ -2,9 +2,9 @@
 
 ;; This is free and unencumbered software released into the public domain.
 
-;; Author: Christopher Wellons <mosquitopsu@gmail.com>
+;; Author: Christopher Wellons <wellons@nullprogram.com>
 ;; URL: https://github.com/skeeto/emacs-http-server
-;; Version: 1.4.3
+;; Version: 1.4.4
 
 ;;; Commentary:
 
@@ -94,6 +94,9 @@
 
 ;;; History:
 
+;; Version 1.4.4: features
+;;   * Common Lisp &key-like defservlet* argument support
+;;   * Fix up some defservlet* usage warnings.
 ;; Version 1.4.3: features
 ;;   * Add `httpd-discard-buffer'
 ;;   * Add `httpd-def-file-servlet'
