@@ -1,4 +1,6 @@
-# A simple Emacs web server
+# simple-httpd
+
+A simple Emacs web server.
 
 This used to be `httpd.el` but there are already several of these out
 there already of varying usefulness. Since the name change, it's been
@@ -34,10 +36,14 @@ at `/hello-world` that says hello.
 
 See the comment header in `simple-httpd.el` for full details.
 
-## Fork
+## Extensions
 
-There's a fork out there but it's been GPLed. Like the rest of my
-software I want to keep this public domain.
+Packages built on simple-httpd:
+
+ * [skewer-mode](https://github.com/skeeto/skewer-mode)
+ * [impatient-mode](https://github.com/netguy204/imp.el)
+ * [airplay](https://github.com/gongo/airplay-el)
+ * [elfeed-web](https://github.com/skeeto/elfeed)
 
 ## Unit tests
 
