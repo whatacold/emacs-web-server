@@ -525,14 +525,22 @@ actually serve up files."
 
 ;; Request parsing
 
+(defun httpd--normalize-header (header)
+  "Destructively capitalize the components of HEADER."
+  (cl-flet ((my-capitalize (s)
+             (prog1 s
+               (when (> (length s) 0)
+                 (setf (aref s 0) (upcase (aref s 0)))))))
+    (mapconcat #'my-capitalize (split-string header "-") "-")))
+
 (defun httpd-parse (string)
   "Parse client http header into alist."
   (let* ((lines (split-string string "[\n\r]+"))
          (req (list (split-string (car lines))))
          (post (cadr (split-string string "\r\n\r\n"))))
     (dolist (line (butlast (cdr lines)))
-      (push (list (car (split-string line ": "))
-                  (mapconcat 'identity
+      (push (list (httpd--normalize-header (car (split-string line ": ")))
+                  (mapconcat #'identity
                              (cdr (split-string line ": ")) ": ")) req))
     (push (list "Content" post) req)
     (reverse req)))
