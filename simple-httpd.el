@@ -527,11 +527,7 @@ actually serve up files."
 
 (defun httpd--normalize-header (header)
   "Destructively capitalize the components of HEADER."
-  (cl-flet ((my-capitalize (s)
-             (prog1 s
-               (when (> (length s) 0)
-                 (setf (aref s 0) (upcase (aref s 0)))))))
-    (mapconcat #'my-capitalize (split-string header "-") "-")))
+  (mapconcat #'capitalize (split-string header "-") "-"))
 
 (defun httpd-parse (string)
   "Parse client http header into alist."
