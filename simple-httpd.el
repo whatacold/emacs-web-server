@@ -295,6 +295,16 @@ instance per Emacs instance."
     (httpd-log `(stop ,(current-time-string)))
     (run-hooks 'httpd-stop-hook)))
 
+(defun httpd-batch-start ()
+  "Never returns, holding the server open indefinitely for batch mode.
+Logs are redirected to stdout. To use, invoke Emacs like this:
+emacs -Q -batch -l simple-httpd.elc -f httpd-batch-start"
+  (if (not noninteractive)
+      (error "Only use `httpd-batch-start' in batch mode!")
+    (httpd-start)
+    (defalias 'httpd-log 'pp)
+    (while t (sleep-for 60))))
+
 ;; Utility
 
 (defun httpd-date-string (&optional date)
