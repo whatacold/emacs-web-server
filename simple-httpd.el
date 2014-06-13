@@ -299,7 +299,7 @@ instance per Emacs instance."
 (defun httpd-serve-directory (directory)
   "Start the web server with given `directory' as `httpd-root'."
   (interactive "DServe directory: \n")
-  (setq httpd-root directory)
+  (setf httpd-root directory)
   (httpd-start)
   (message "Started simple-httpd on %s:%d, serving: %s"
            (cl-case httpd-host
@@ -339,7 +339,7 @@ emacs -Q -batch -l simple-httpd.elc -f httpd-batch-start"
 
 (defun httpd--filter (proc string)
   "Runs each time client makes a request."
-  (setq string (concat (process-get proc :previous-string) string))
+  (setf string (concat (process-get proc :previous-string) string))
   (let* ((request (httpd-parse string))
          (content-length (cadr (assoc "Content-Length" request)))
          (uri (cl-cadar request))
@@ -371,14 +371,14 @@ emacs -Q -batch -l simple-httpd.elc -f httpd-batch-start"
 (defun httpd-log (item)
   "Pretty print a lisp object to the log."
   (with-current-buffer (get-buffer-create "*httpd*")
-    (setq buffer-read-only nil)
+    (setf buffer-read-only nil)
     (let ((follow (= (point) (point-max))))
       (save-excursion
         (goto-char (point-max))
         (pp item (current-buffer)))
       (if follow (goto-char (point-max))))
-    (setq truncate-lines t)
-    (setq buffer-read-only t)
+    (setf truncate-lines t
+          buffer-read-only t)
     (set-buffer-modified-p nil)))
 
 ;; Servlets
@@ -735,7 +735,7 @@ the `httpd-current-proc' as the process."
         (size 0))
     (with-current-buffer (or buffer (current-buffer))
       (set-buffer-multibyte nil)
-      (setq size (buffer-size))
+      (setf size (buffer-size))
       (if orig (set-buffer-multibyte orig)))
     size))
 
