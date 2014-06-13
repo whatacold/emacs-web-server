@@ -7,6 +7,7 @@
 
 ;;; Code:
 
+(require 'cl)
 (require 'ert)
 (require 'simple-httpd)
 
