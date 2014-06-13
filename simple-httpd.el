@@ -142,7 +142,7 @@
 (defcustom httpd-host nil
   "Web server host name used by `make-network-process'."
   :group 'simple-httpd
-  :type 'symbol)
+  :type '(choice (const nil) (const local) string))
 
 (defcustom httpd-port 8080
   "Web server port."
