@@ -32,7 +32,7 @@
          (p (httpd-parse h)))
     (should (equal (cadar p) "/f%20b"))
     (should (equal (cadr (assoc "Host" p)) "localhost:8080"))
-    (should (equal (cadr (assoc "DNT" p)) "1, 2"))))
+    (should (equal (cadr (assoc "Dnt" p)) "1, 2"))))
 
 (ert-deftest httpd-parse-uri-test ()
   "Test URI parsing."
