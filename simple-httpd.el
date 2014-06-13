@@ -295,6 +295,18 @@ instance per Emacs instance."
     (httpd-log `(stop ,(current-time-string)))
     (run-hooks 'httpd-stop-hook)))
 
+;;;###autoload
+(defun httpd-serve-directory (directory)
+  "Start the web server with given `directory' as `httpd-root'."
+  (interactive "DServe directory: \n")
+  (setq httpd-root directory)
+  (httpd-start)
+  (message "Started simple-httpd on %s:%d, serving: %s"
+           (cl-case httpd-host
+             ((nil) "0.0.0.0")
+             ((local) "localhost")
+             (otherwise httpd-host)) httpd-port directory))
+
 (defun httpd-batch-start ()
   "Never returns, holding the server open indefinitely for batch mode.
 Logs are redirected to stdout. To use, invoke Emacs like this:
