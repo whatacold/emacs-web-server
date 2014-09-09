@@ -86,7 +86,8 @@
 (ert-deftest httpd-unhex-test ()
   "Test URL decoding."
   (should (equal (httpd-unhex "I+%2Bam%2B+foo.") "I +am+ foo."))
-  (should (equal (httpd-unhex "foo%0D%0Abar") "foo\r\nbar"))
+  (should (equal (httpd-unhex "foo%0D%0Abar") "foo\nbar"))
+  (should (equal (httpd-unhex "na%C3%AFve") "naïve"))
   (should (eq (httpd-unhex nil) nil)))
 
 (ert-deftest httpd-parse-args-test ()

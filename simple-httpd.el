@@ -566,7 +566,8 @@ actually serve up files."
 (defun httpd-unhex (str)
   "Fully decode the URL encoding in STR (including +'s)."
   (when str
-    (url-unhex-string (replace-regexp-in-string (regexp-quote "+") " " str) t)))
+    (let ((nonplussed (replace-regexp-in-string (regexp-quote "+") " " str)))
+      (decode-coding-string (url-unhex-string nonplussed t) 'utf-8))))
 
 (defun httpd-parse-args (argstr)
   "Parse a string containing URL encoded arguments."
