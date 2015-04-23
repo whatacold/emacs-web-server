@@ -4,7 +4,7 @@
 
 ;; Author: Christopher Wellons <wellons@nullprogram.com>
 ;; URL: https://github.com/skeeto/emacs-http-server
-;; Version: 1.4.5
+;; Version: 1.4.6
 ;; Package-Requires: ((cl-lib "0.3"))
 
 ;;; Commentary:
@@ -95,6 +95,9 @@
 
 ;;; History:
 
+;; Version 1.4.6: fixes
+;;   * Added httpd-serve-directory
+;;   * Fix some encoding issues
 ;; Version 1.4.5: fixes
 ;;   * Update to cl-lib from cl
 ;; Version 1.4.4: features
