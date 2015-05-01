@@ -445,11 +445,12 @@ A servlet that says hello,
   "Parse an endpoint definition template for use with `defservlet*'."
   (cl-loop for item in (split-string (symbol-name symbol) "/")
            for n upfrom 0
-           when (eql (aref item 0) ?:)
+           when (and (> (length item) 0) (eql (aref item 0) ?:))
            collect (cons (intern (substring item 1)) n) into vars
            else collect item into path
-           finally (return
-                    (cl-values (intern (mapconcat #'identity path "/")) vars))))
+           finally
+           (cl-return
+            (cl-values (intern (mapconcat #'identity path "/")) vars))))
 
 (defvar httpd-path nil
   "Anaphoric variable for `defservlet*'.")
