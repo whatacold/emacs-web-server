@@ -49,11 +49,15 @@
 
 (ert-deftest httpd-parse-test ()
   "Test HTTP header parsing."
-  (let* ((h "GET /f%20b HTTP/1.1\r\nHost: localhost:8080\r\DNT: 1, 2\r\n\r\n")
-         (p (httpd-parse h)))
-    (should (equal (cl-cadar p) "/f%20b"))
-    (should (equal (cadr (assoc "Host" p)) "localhost:8080"))
-    (should (equal (cadr (assoc "Dnt" p)) "1, 2"))))
+  (with-temp-buffer
+    (set-buffer-multibyte nil)
+    (insert "GET /f%20b HTTP/1.1\r\n"
+            "Host: localhost:8080\r\n"
+            "DNT: 1, 2\r\n\r\n")
+    (let ((p (httpd-parse)))
+      (should (equal (cl-cadar p) "/f%20b"))
+      (should (equal (cadr (assoc "Host" p)) "localhost:8080"))
+      (should (equal (cadr (assoc "Dnt" p)) "1, 2")))))
 
 (ert-deftest httpd-parse-uri-test ()
   "Test URI parsing."
@@ -68,11 +72,15 @@
 
 (ert-deftest httpd-send-header-test ()
   "Test server header output."
-  (let ((header ""))
-    (httpd--flet ((process-send-region (p a b)
-             (setq header (concat header (buffer-string)))))
-      (httpd-send-header nil "text/html" 404 :Foo "bar"))
-    (let ((out (httpd-parse header)))
+  (with-temp-buffer
+    (set-buffer-multibyte nil)
+    (let ((buffer (current-buffer)))
+      (httpd--flet ((process-send-region (_proc _start _end)
+                      (let ((send-buffer (current-buffer)))
+                        (with-current-buffer buffer
+                          (insert-buffer-substring send-buffer)))))
+        (httpd-send-header nil "text/html" 404 :Foo "bar")))
+    (let ((out (httpd-parse)))
       (should (equal (cl-cadar out) "404"))
       (should (equal (cadr (assoc "Content-Type" out)) "text/html"))
       (should (equal (cadr (assoc "Foo" out)) "bar")))))
