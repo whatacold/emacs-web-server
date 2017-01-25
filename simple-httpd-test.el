@@ -7,9 +7,30 @@
 
 ;;; Code:
 
-(require 'cl)
 (require 'ert)
+(require 'cl-lib)
 (require 'simple-httpd)
+
+(defmacro httpd--flet (funcs &rest body)
+  "Like `cl-flet' but with dynamic function scope."
+  (declare (indent 1))
+  (let* ((names (mapcar #'car funcs))
+         (lambdas (mapcar #'cdr funcs))
+         (gensyms (cl-loop for name in names
+                           collect (make-symbol (symbol-name name)))))
+    `(let ,(cl-loop for name in names
+                    for gensym in gensyms
+                    collect `(,gensym (symbol-function ',name)))
+       (unwind-protect
+           (progn
+             ,@(cl-loop for name in names
+                        for lambda in lambdas
+                        for body = `(lambda ,@lambda)
+                        collect `(setf (symbol-function ',name) ,body))
+             ,@body)
+         ,@(cl-loop for name in names
+                    for gensym in gensyms
+                    collect `(setf (symbol-function ',name) ,gensym))))))
 
 (ert-deftest httpd-clean-path-test ()
   "Ensure that paths are sanitized properly."
@@ -30,7 +51,7 @@
   "Test HTTP header parsing."
   (let* ((h "GET /f%20b HTTP/1.1\r\nHost: localhost:8080\r\DNT: 1, 2\r\n\r\n")
          (p (httpd-parse h)))
-    (should (equal (cadar p) "/f%20b"))
+    (should (equal (cl-cadar p) "/f%20b"))
     (should (equal (cadr (assoc "Host" p)) "localhost:8080"))
     (should (equal (cadr (assoc "Dnt" p)) "1, 2"))))
 
@@ -39,7 +60,7 @@
   (let* ((url "/foo/bar%20baz.html?q=test%26case&v=10#page10")
          (p (httpd-parse-uri url))
          (args (cadr p))
-         (fragment (caddr p)))
+         (fragment (cl-caddr p)))
     (should (equal (car p) "/foo/bar baz.html"))
     (should (equal (cadr (assoc "v" args)) "10"))
     (should (equal (cadr (assoc "q" args)) "test&case"))
@@ -48,28 +69,28 @@
 (ert-deftest httpd-send-header-test ()
   "Test server header output."
   (let ((header ""))
-    (flet ((process-send-region (p a b)
+    (httpd--flet ((process-send-region (p a b)
              (setq header (concat header (buffer-string)))))
       (httpd-send-header nil "text/html" 404 :Foo "bar"))
     (let ((out (httpd-parse header)))
-      (should (equal (cadar out) "404"))
+      (should (equal (cl-cadar out) "404"))
       (should (equal (cadr (assoc "Content-Type" out)) "text/html"))
       (should (equal (cadr (assoc "Foo" out)) "bar")))))
 
 (ert-deftest httpd-status-test ()
   "Test HTTP status message for mocked request states."
-  (flet ((file-exists-p (file) t)
-         (file-readable-p (file) nil))
+  (httpd--flet ((file-exists-p (file) t)
+                (file-readable-p (file) nil))
     (should (eq (httpd-status "/some/file") 403)))
-  (flet ((file-exists-p (file) nil))
+  (httpd--flet ((file-exists-p (file) nil))
     (should (eq (httpd-status "/some/file") 404)))
-  (flet ((file-exists-p (file) t)
-         (file-readable-p (file) t)
-         (file-directory-p (file) nil))
+  (httpd--flet ((file-exists-p (file) t)
+                (file-readable-p (file) t)
+                (file-directory-p (file) nil))
     (should (eq (httpd-status "/some/file") 200)))
-  (flet ((file-exists-p (file) t)
-         (file-readable-p (file) t)
-         (file-directory-p (file) t))
+  (httpd--flet ((file-exists-p (file) t)
+                (file-readable-p (file) t)
+                (file-directory-p (file) t))
     (let ((httpd-listings nil))
       (should (eq (httpd-status "/some/file") 403)))
     (let ((httpd-listings t))
@@ -77,7 +98,7 @@
 
 (ert-deftest httpd-get-servlet-test ()
   "Test servlet dispatch."
-  (flet ((httpd/foo/bar () t))
+  (httpd--flet ((httpd/foo/bar () t))
     (let ((httpd-servlets t))
       (should (eq (httpd-get-servlet "/foo/bar")     'httpd/foo/bar))
       (should (eq (httpd-get-servlet "/foo/bar/baz") 'httpd/foo/bar))
