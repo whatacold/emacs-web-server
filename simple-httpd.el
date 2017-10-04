@@ -665,15 +665,16 @@ if it failed to parse a complete HTTP header."
             (split-string argstr "&"))))
 
 (defun httpd-parse-uri (uri)
-  "Split a URI into it's components. In the return, the first
-element is the script path, the second is an alist of
-variable/value pairs, and the third is the fragment."
+  "Split a URI into its components.
+The first element of the return value is the script path, the
+second element is an alist of variable/value pairs, and the third
+element is the fragment."
   (let ((p1 (string-match (regexp-quote "?") uri))
         (p2 (string-match (regexp-quote "#") uri))
         retval)
     (push (if p2 (httpd-unhex (substring uri (1+ p2)))) retval)
     (push (if p1 (httpd-parse-args (substring uri (1+ p1) p2))) retval)
-    (push (httpd-unhex (substring uri 0 (or p1 p2))) retval)))
+    (push (substring uri 0 (or p1 p2)) retval)))
 
 ;; Path handling
 
