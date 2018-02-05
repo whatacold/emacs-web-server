@@ -356,6 +356,11 @@ instance per Emacs instance."
     (run-hooks 'httpd-stop-hook)))
 
 ;;;###autoload
+(defun httpd-running-p ()
+  "Return non-nil if the simple-httpd server is running."
+  (not (null (process-status "httpd"))))
+
+;;;###autoload
 (defun httpd-serve-directory (directory)
   "Start the web server with given `directory' as `httpd-root'."
   (interactive "DServe directory: \n")
