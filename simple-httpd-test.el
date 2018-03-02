@@ -65,7 +65,7 @@
          (p (httpd-parse-uri url))
          (args (cadr p))
          (fragment (cl-caddr p)))
-    (should (equal (car p) "/foo/bar baz.html"))
+    (should (equal (car p) "/foo/bar%20baz.html"))
     (should (equal (cadr (assoc "v" args)) "10"))
     (should (equal (cadr (assoc "q" args)) "test&case"))
     (should (equal fragment "page10"))))
