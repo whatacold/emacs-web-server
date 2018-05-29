@@ -11,8 +11,8 @@ check: simple-httpd-test.elc
 clean:
 	rm -f simple-httpd.elc simple-httpd-test.elc
 
-simple-httpd-test.elc: simple-httpd-test.el simple-httpd.el
+simple-httpd-test.elc: simple-httpd-test.el simple-httpd.elc
 
 .SUFFIXES: .el .elc
 .el.elc:
-	$(BATCH) -f batch-byte-compile $^
+	$(BATCH) -f batch-byte-compile $<
