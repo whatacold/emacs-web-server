@@ -178,6 +178,11 @@
   :group 'simple-httpd
   :type 'boolean)
 
+(defcustom httpd-show-backtrace-when-error t
+  "If true, show backtrace on error page."
+  :group 'simple-httpd
+  :type 'boolean)
+
 (defcustom httpd-start-hook nil
   "Hook to run when the server has started."
   :group 'simple-httpd
@@ -855,8 +860,15 @@ optionally inserting object INFO into page. If PROC is T use the
   (httpd-log `(error ,status ,info))
   (with-temp-buffer
     (let ((html (or (cdr (assq status httpd-html)) ""))
-          (erro (url-insert-entities-in-string (format "error: %s"  info))))
-      (insert (format html (if info erro ""))))
+          (erro (url-insert-entities-in-string (format "error: %s\n"  info)))
+          (bt   (format "backtrace: %s\n"
+                        (with-temp-buffer
+                          (let ((standard-output (current-buffer)))
+                            (backtrace))
+                          (buffer-string)))))
+      (insert (format html (concat
+                            (when info erro)
+                            (when httpd-show-backtrace-when-error bt)))))
     (httpd-send-header proc "text/html" status)))
 
 (defun httpd--error-safe (&rest args)
