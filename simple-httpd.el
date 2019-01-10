@@ -699,6 +699,23 @@ element is the fragment."
     (push (if p1 (httpd-parse-args (substring uri (1+ p1) p2))) retval)
     (push (substring uri 0 (or p1 p2)) retval)))
 
+(defun httpd-escape-html-buffer ()
+  "Escape current buffer contents to be safe for inserting into HTML."
+  (setf (point) (point-min))
+  (while (search-forward-regexp "[<>&]" nil t)
+    (replace-match
+     (cl-case (aref (match-string 0) 0)
+       (?< "&lt;")
+       (?> "&gt;")
+       (?& "&amp;")))))
+
+(defun httpd-escape-html (string)
+  "Escape STRING so that it's safe to insert into an HTML document."
+  (with-temp-buffer
+    (insert string)
+    (httpd-escape-html-buffer)
+    (buffer-string)))
+
 ;; Path handling
 
 (defun httpd-status (path)

@@ -129,4 +129,17 @@
   (should (equal (httpd-parse-endpoint 'example/foos/:n/:d)
                  '(example/foos ((n . 2) (d . 3))))))
 
+(ert-deftest httpd-escape-html-test ()
+  "Test URL decoding."
+  (let ((tests '(("hello world" .
+                  "hello world")
+                 ("a <b>bold</b> request" .
+                  "a &lt;b&gt;bold&lt;/b&gt; request")
+                 ("alpha & beta" .
+                  "alpha &amp; beta")
+                 ("&&&" .
+                  "&amp;&amp;&amp;"))))
+    (cl-loop for (in . out) in tests
+             do (should (equal (httpd-escape-html in) out)))))
+
 ;;; simple-httpd-test.el ends here
