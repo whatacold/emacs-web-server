@@ -178,7 +178,7 @@
   :group 'simple-httpd
   :type 'boolean)
 
-(defcustom httpd-show-backtrace-when-error t
+(defcustom httpd-show-backtrace-when-error nil
   "If true, show backtrace on error page."
   :group 'simple-httpd
   :type 'boolean)
@@ -877,15 +877,21 @@ optionally inserting object INFO into page. If PROC is T use the
   (httpd-log `(error ,status ,info))
   (with-temp-buffer
     (let ((html (or (cdr (assq status httpd-html)) ""))
-          (erro (url-insert-entities-in-string (format "error: %s\n"  info)))
-          (bt   (format "backtrace: %s\n"
-                        (with-temp-buffer
-                          (let ((standard-output (current-buffer)))
-                            (backtrace))
-                          (buffer-string)))))
-      (insert (format html (concat
-                            (when info erro)
-                            (when httpd-show-backtrace-when-error bt)))))
+          (contents
+           (if (not info)
+               ""
+             (with-temp-buffer
+               (let ((standard-output (current-buffer)))
+                 (insert "error: ")
+                 (princ info)
+                 (insert "\n")
+                 (when httpd-show-backtrace-when-error
+                   (insert "backtrace: ")
+                   (princ (backtrace))
+                   (insert "\n"))
+                 (httpd-escape-html-buffer)
+                 (buffer-string))))))
+      (insert (format html contents)))
     (httpd-send-header proc "text/html" status)))
 
 (defun httpd--error-safe (&rest args)
