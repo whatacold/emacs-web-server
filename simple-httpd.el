@@ -432,7 +432,7 @@ emacs -Q -batch -l simple-httpd.elc -f httpd-batch-start"
             (let* ((content (buffer-string))
                    (uri (cl-cadar request))
                    (parsed-uri (httpd-parse-uri (concat uri)))
-                   (uri-path (nth 0 parsed-uri))
+                   (uri-path (httpd-unhex (nth 0 parsed-uri)))
                    (uri-query (append (nth 1 parsed-uri)
                                       (httpd-parse-args content)))
                    (servlet (httpd-get-servlet uri-path)))
@@ -843,7 +843,7 @@ the `httpd-current-proc' as the process."
     (if (equal "/" (substring uri-path -1))
         (with-temp-buffer
           (httpd-log `(directory ,path))
-          (set-buffer-multibyte nil)
+          (set-buffer-multibyte t)
           (insert "<!DOCTYPE html>\n")
           (insert "<html>\n<head><title>" title "</title></head>\n")
           (insert "<body>\n<h2>" title "</h2>\n<hr/>\n<ul>")
@@ -856,7 +856,7 @@ the `httpd-current-proc' as the process."
                 (insert (format "<li><a href=\"%s%s\">%s%s</a></li>\n"
                                 l tail f tail)))))
           (insert "</ul>\n<hr/>\n</body>\n</html>")
-          (httpd-send-header proc "text/html" 200))
+          (httpd-send-header proc "text/html; charset=utf-8" 200))
       (httpd-redirect proc (concat uri-path "/")))))
 
 (defun httpd--buffer-size (&optional buffer)
