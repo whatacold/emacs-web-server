@@ -43,7 +43,6 @@
 
 (ert-deftest httpd-mime-test ()
   "Test MIME type fetching."
-  (should (equal (httpd-get-mime "txt") "text/plain"))
   (should (equal (httpd-get-mime "unknown") "application/octet-stream"))
   (should (equal (httpd-get-mime nil) "application/octet-stream")))
 
