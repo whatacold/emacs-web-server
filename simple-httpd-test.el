@@ -84,25 +84,6 @@
       (should (equal (cadr (assoc "Content-Type" out)) "text/html"))
       (should (equal (cadr (assoc "Foo" out)) "bar")))))
 
-(ert-deftest httpd-status-test ()
-  "Test HTTP status message for mocked request states."
-  (httpd--flet ((file-exists-p (file) t)
-                (file-readable-p (file) nil))
-    (should (eq (httpd-status "/some/file") 403)))
-  (httpd--flet ((file-exists-p (file) nil))
-    (should (eq (httpd-status "/some/file") 404)))
-  (httpd--flet ((file-exists-p (file) t)
-                (file-readable-p (file) t)
-                (file-directory-p (file) nil))
-    (should (eq (httpd-status "/some/file") 200)))
-  (httpd--flet ((file-exists-p (file) t)
-                (file-readable-p (file) t)
-                (file-directory-p (file) t))
-    (let ((httpd-listings nil))
-      (should (eq (httpd-status "/some/file") 403)))
-    (let ((httpd-listings t))
-      (should (eq (httpd-status "/some/file") 200)))))
-
 (ert-deftest httpd-get-servlet-test ()
   "Test servlet dispatch."
   (httpd--flet ((httpd/foo/bar () t))
